@@ -133,17 +133,13 @@ map2(modB1, plt_name_draw,
        \(q, w) ggsave(paste0("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/diags/", w, ".png"), q, bg = "white"))
 
 
-
-plt_name_perform_full <- str_c("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/diags/performance_", IVs, "_", DVs, ".png")
-
-map(modB1, ~performance::check_model(., theme = "ggplot2::theme_minimal(base.size =50)")) %>% 
-  map2(., plt_name_perform_full, 
-       \(q, w) {png(w, width = 3000, height = 1500); plot(q); dev.off()})
-
-
 ############
 # just manually go thru performance::check_model() because changing the base.size is impossible lol
-
+# plt_name_perform_full <- str_c("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/diags/performance_", IVs, "_", DVs, ".png")
+# 
+# map(modB1, ~performance::check_model(., theme = "ggplot2::theme_minimal(base.size =50)")) %>% 
+#   map2(., plt_name_perform_full, 
+#        \(q, w) {png(w, width = 3000, height = 1500); plot(q); dev.off()})
 
 # https://mc-stan.org/bayesplot/articles/visual-mcmc-diagnostics.html
 # ^^^ go thru this!! 
@@ -154,33 +150,26 @@ b1SA <- stan_glm(paste0(c("SA ~ ROSLA", b1_covs), collapse=" + "), data = b1, it
 # do ploy on scan date & see if anything changes as this orthogonlizes it!
 # VERY HIGH VIFs
 
-
-# Error: Error : 'data' must be a data frame.
-# what a bitch...d
+# plotting the posterior of the IV's with rainclouds...
 
 
+# you need to raincloud EduYears vs ROSLA...
+
+plt_path = "~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/"
+modB1 %>% 
+  map(~data.frame(iv_posterior = get_parameters(.)[,2], 
+                  dv_name = rep(as.character(.$formula[2]), dim(get_parameters(.)[2])[1]),
+                  iv_name = rep(names(get_parameters(.))[2], dim(get_parameters(.)[2])[1]))) %>% 
+  map(~{ggplot(., aes(1, iv_posterior)) + 
+      ggrain::geom_rain(point.args = list(alpha = .05)) + 
+      theme_classic(base_size = 20) +
+      labs(y = str_c("Effect of ", unique(.$iv_name), " on ", unique(.$dv_name)))}) %>% 
+  map(~ggsave(str_c(plt_path, str_replace_all(.$labels$y, " ", "_"), ".png"), ., bg = "white"))
+  
 
 
-nkj %>% map(~str_split(.$formula, " ")[[1]][1]) 
-nkj %>% map(~str_split(.$formula, " ")[[1]][3]) 
 
-
-nkj%>% map(~hdi(.)$CI_low[2])
-
-
-nkj %>% map(~mean(get_parameters(.)[,2]))
-
-
-bayesfactor_parameters(get_parameters(nkj[[1]])[,2], prior = distribution_normal(40000, 0, 1))
-
-bayesfactor_parameters(b1SA, null = 0)
-bayesfactor_parameters(get_parameters(b1SA)[,2], prior = distribution_normal(80000, 0, 1), null = 0)
-
-map(str_split(wFA_codes$Field, " "), `[`, -c(1:4))
-
-ct %>% map(`[`) %>% map(~hdi(.)$CI_low[2])
-
-
+  
 
 
 
