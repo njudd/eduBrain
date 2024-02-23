@@ -150,7 +150,7 @@ bayesFIT <- function(iv, dv, covs, df){
   
   f <- eval(parse(text = paste0(c(paste(iv, "~", dv), covs), collapse=" + ")))
   #^^^ this is needed for bayesfactor_parameters in bayes_to_results()
-  m <- stan_glm(f, data = df, iter = 60000, refresh=0) #40000
+  m <- stan_glm(f, data = df, iter = 80000, refresh=0) #40000
     # assign it
   # assign(paste0("m", iv,"_", dv), m) #, envir = globalenv()) #  envir = parent.frame()
   
