@@ -155,16 +155,31 @@ b1SA <- stan_glm(paste0(c("SA ~ ROSLA", b1_covs), collapse=" + "), data = b1, it
 
 # you need to raincloud EduYears vs ROSLA...
 
-plt_path = "~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/"
-modB1 %>% 
-  map(~data.frame(iv_posterior = get_parameters(.)[,2], 
-                  dv_name = rep(as.character(.$formula[2]), dim(get_parameters(.)[2])[1]),
-                  iv_name = rep(names(get_parameters(.))[2], dim(get_parameters(.)[2])[1]))) %>% 
-  map(~{ggplot(., aes(1, iv_posterior)) + 
-      ggrain::geom_rain(point.args = list(alpha = .05)) + 
-      theme_classic(base_size = 20) +
-      labs(y = str_c("Effect of ", unique(.$iv_name), " on ", unique(.$dv_name)))}) %>% 
-  map(~ggsave(str_c(plt_path, str_replace_all(.$labels$y, " ", "_"), ".png"), ., bg = "white"))
+
+#### just manually extract them...
+
+sa_post <- data.frame(iv = c(rep(names(get_parameters(modB1[[1]]))[2], dim(get_parameters(modB1[[1]])[2])[1]), rep(names(get_parameters(modB1[[2]]))[2], dim(get_parameters(modB1[[2]])[2])[1])),
+                      posterior = c(get_parameters(modB1[[1]])[,2], get_parameters(modB1[[2]])[,2]))
+
+ggplot(sa_post, aes(1, posterior, fill = iv, color = iv)) + 
+  ggrain::geom_rain(alpha = .05, rain.side = 'l', boxplot.args.pos = list(
+    position = ggpp::position_dodgenudge(x = .1, width = 0.1), width = 0.1)) +
+  theme_classic() +
+  scale_fill_brewer(palette = 'Dark2') +
+  scale_color_brewer(palette = 'Dark2')
+
+
+# old code that isn't great
+# plt_path = "~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/"
+# modB1 %>% 
+#   map(~data.frame(iv_posterior = get_parameters(.)[,2], 
+#                   dv_name = rep(as.character(.$formula[2]), dim(get_parameters(.)[2])[1]),
+#                   iv_name = rep(names(get_parameters(.))[2], dim(get_parameters(.)[2])[1]))) %>% 
+#   map(~{ggplot(., aes(1, iv_posterior)) + 
+#       ggrain::geom_rain(point.args = list(alpha = .05)) + 
+#       theme_classic(base_size = 20) +
+#       labs(y = str_c("Effect of ", unique(.$iv_name), " on ", unique(.$dv_name)))}) %>% 
+#   map(~ggsave(str_c(plt_path, str_replace_all(.$labels$y, " ", "_"), ".png"), ., bg = "white"))
   
 
 
