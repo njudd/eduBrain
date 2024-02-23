@@ -4,9 +4,9 @@
 # 2024-02-14 https://njudd.com 
 
 ### Table of Contents
-# 3.1 Loading data from 1_ContinutyGlobal
-# 3.2 
-# 3.3 
+# 3.1 Packages & data from 1_ContinutyGlobal.R
+# 3.2 1 month window analysis
+# 3.3 1 month window plotting
 # 3.4 
 # 3.5 
 # 3.6 misc
@@ -31,12 +31,15 @@ pacman::p_load(tidyverse, lubridate, stringr, RDHonest, fastDummies, mice, ggseg
                rstanarm, insight, bayestestR, furrr, bayesplot)
 
 # grab functions
-source("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/R_scripts/0_functions.R") 
+source("~/projects/roslaUKB/main_analysis/0_functions.R") 
 # function: vec_to_fence() takes a vector and puts outliers to the fence (i.e., boxplot.stats)
 # function: RDjacked() for cov corrected fuzzy RD
 
 # function to fit a simple mod with covs 
-# bayesFIT("SA", "ROSLA", b1_covs, b1)
+# bayesFIT("SA", "ROSLA", b1_covs, b1) # outputs a list of models
+
+# function to get the output I want
+# bayes_to_results(list_of_models)
 
 # 1) covariates, 2) covariates to fence & 3)cols with running_var
 covs <- c("sex", "visit_day_correct", "visit_day_correct2", "t2_FLAIR" , "summer", "headmotion", #, "t2_FLAIR"* , "summer"
@@ -48,13 +51,16 @@ cols = c("EduAge16", "running_var", covs)
 # loading data
 fullset <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/proc/20240223_fullset.csv")
 
-# 1mnth window
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+#### 3.2 1 month window analysis ####
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 b1 <- fullset[running_var %in% c(-1,0)][
   , ROSLA := running_var >= 0
 ][
   !is.na(visit_date) #must be an imaging subjects (visit date instance 2)
 ]
-table(b1$month)
+
+# table(b1$month); table(b1$ROSLA) #checking that it really is the right number and groups
 
 # no variance for the following covs
 b1_covs <- covs[!covs %in% c("summer", "t2_FLAIR", "imaging_center_11028")]
@@ -90,30 +96,63 @@ IVs <- rep(c("SA", "CT", "CSF_norm", "TBV_norm", "WM_hyper", "wFA"), each = 2) #
 DVs <- rep(c("ROSLA", "EduAge"), 6)
 
 plan(multisession, workers = 6) # THIS WORKS
-nkj <- future_map2(IVs, DVs, \(x, y) bayesFIT(x, y, b1_covs, b1),
+modB1 <- future_map2(IVs, DVs, \(x, y) bayesFIT(x, y, b1_covs, b1),
                    .options = furrr_options(seed = T))
 
-# checking diags
-
-# just save them in a folder 
-
-performance::check_model(nkj[[1]]) # has some issues...
-performance::check_model(b1SA)
+bayes_to_results(modB1) %>% 
+  kbl(caption = "One Month Bandwidth Bayesian Analysis") %>%
+  kable_styling("hover", full_width = F) %>% 
+  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/Bayes1m.html")
 
 
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+#### 3.3 1 month window diagnostics and plotting ####
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+# https://data-se.netlify.app/2021/02/06/plotting-multiple-plots-using-purrr-map-and-ggplot/
+# how map2 works
+# x <- list(1, 1, 1)
+# y <- list(10, 20, 30)
+# map2(x, y, \(x, y) x + y)
+
+# plotting and saving trace plots
+plt_name_trace <- str_c("Trace plot BayesLocal (1 mnth) of", IVs," on ", DVs)
+plt_name_trace_s <- str_c("trace_", IVs, "_", DVs)
+
+map2(modB1, plt_name_trace, 
+     \(x, y) {mcmc_trace(x) + labs(title = y)}) %>% 
+  map2(., plt_name_trace_s, 
+       \(q, w) ggsave(paste0("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/diags/", w, ".png"), q, bg = "white"))
+
+# plotting and saving posterior draws
+plt_name_draw <- str_c("Posterior draws BayesLocal (1 mnth) of", IVs," on ", DVs)
+plt_name_draw_s <- str_c("draw_", IVs, "_", DVs)
+
+map2(modB1, plt_name_draw, 
+     \(x, y) {color_scheme_set("pink"); ppc_dens_overlay(y = x$y, yrep = posterior_predict(x, draws = 200)) + labs(title = y)}) %>% 
+  map2(., plt_name_draw_s, 
+       \(q, w) ggsave(paste0("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/diags/", w, ".png"), q, bg = "white"))
 
 
 
+plt_name_perform_full <- str_c("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/diags/performance_", IVs, "_", DVs, ".png")
 
-bayesplot::mcmc_trace(nkj[[1]])
+map(modB1, ~performance::check_model(., theme = "ggplot2::theme_minimal(base.size =50)")) %>% 
+  map2(., plt_name_perform_full, 
+       \(q, w) {png(w, width = 3000, height = 1500); plot(q); dev.off()})
 
-color_scheme_set("brightblue")
-mcmc_hist_by_chain(posterior, pars = c("wt", "sigma"))
+
+############
+# just manually go thru performance::check_model() because changing the base.size is impossible lol
 
 
-nkj_results <- bayes_to_results(nkj)
+# https://mc-stan.org/bayesplot/articles/visual-mcmc-diagnostics.html
+# ^^^ go thru this!! 
 
-##### THIS WORKS!!!!!!!!^^^^^
+
+
+b1SA <- stan_glm(paste0(c("SA ~ ROSLA", b1_covs), collapse=" + "), data = b1, iter = 40000)
+# do ploy on scan date & see if anything changes as this orthogonlizes it!
+# VERY HIGH VIFs
 
 
 # Error: Error : 'data' must be a data frame.
