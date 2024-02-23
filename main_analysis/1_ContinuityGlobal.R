@@ -1,0 +1,402 @@
+#### ### ----------------- ### ####
+# Nicholas Judd
+# Donders Institute - LCD Lab
+# 2024-02-14 https://njudd.com 
+
+### Table of Contents
+# 1.1 Loading & cleaning
+# 1.2 making a running var
+# 1.3 plotting
+# 1.4 fuzzy RD
+# 1.5 assumption tests & misc
+#### ### ----------------- ### ####
+
+
+### worknotes
+# check *'s
+
+# I just read straight off a copy of /phenotypes/current. these are already funpacked, 
+# I doublechecked using the command line fmrib-unpack
+
+
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+#### 1.1 Loading & cleaning ####
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+
+if (!require(pacman)){
+  install.packages('pacman')
+}
+
+# grab functions
+source("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/R_scripts/0_functions.R") 
+# function: vec_to_fence() takes a vector and puts outliers to the fence (i.e., boxplot.stats)
+# function: RDjacked() for cov corrected fuzzy RD
+
+pacman::p_load(tidyverse, lubridate, stringr, RDHonest, fastDummies, mice, ggseg, kableExtra, rddensity)
+
+##### ##### ##### ##### 
+##### helpful code!!!
+##### ##### ##### ##### 
+
+# mutate(day = interval(ymd("2018/12/31"),ymd(interview_date)) %/% days(1)) |> # making a col of days starting from 01/01/2019
+#   filter(between(interview_date, as.Date('2019-07-01'), as.Date('2019-12-31'))) |> # only taking data from the semster as discussed
+
+# subs_ex_vol <- subs_ex_vol[subs_ex_vol[, complete.cases(.SD), .SDcols = col_names]][ # removing subjects without data in all cols
+#   ,(col_fence.s) := lapply(.SD, vec_to_fence), .SDcols=col_fence.s # bringing the dvs to the fence
+# ]
+
+
+# ukb <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/raw/current/31_brain_IDPs.csv")
+witte_vars <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/raw/N.Judd_2024_02_06.csv") # he said he doesn't have 196 & 24419
+witte_UK_headmotion <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/raw/N.Judd_2024_02_23.csv") # he said he doesn't have 196 & 24419
+
+
+# rm(list = ls()[ls() != "witte_vars"])
+fullset <- data.table::copy(witte_vars)
+# unfortuenly you need to run 2_ContinuityROI.R to get the mean wFA variable
+wFA <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/proc/20240222_wFAGLOBAL.csv")[, .(eid, wFA)]
+
+###### time of day
+# # https://git.fmrib.ox.ac.uk/falmagro/ukb_unconfound_v2/-/blob/master/generate_initial_data/gen_initial_workspace/script_initial_workspace.sh
+# # it is very weird, tho they use t1.txt which I haven't found; instead T1.json
+# timeofday <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/raw/acq.txt",  sep = "/")[, .(V6, V8)]
+# timeofday$V8 <- sapply(strsplit(timeofday$V8, ": "), "[", 2) #splitting to get the number
+# timeofday$V8 <- str_remove(timeofday$V8, ",") # an annoying comma left
+# 
+# # if it really is %hr %min %sec %nanoSec; than you can keep in OG format
+# 
+# # timeofday$V8 <- anytime(timeofday$V8)
+# # hist(as.numeric(timeofday$V8))
+# # strftime(timeofday$V8[1:5], format = "%H:%M:%S:%N")
+# 
+# colnames(timeofday) <- c("eid", "acq_time")
+# fullset$acq_time <- as.numeric(fullset$acq_time)
+# # fullset <- timeofday[fullset, on = 'eid']
+
+
+# renaming the UKB id's: https://biobank.ndph.ox.ac.uk/ukb/search.cgi
+# UKBID-instance-array
+# instance 2 is the imaging visit!
+
+namevar = c(year = "34-0.0", month = "52-0.0", sex = "31-0.0",
+            dMRI_25921_1 = "25921-2.0", dMRI_25922_1 = "25922-2.0", dMRI_25928_1 = "25928-2.0",
+            t1_intensity = "25925-2.0",t2_FLAIR = "26500-2.0",
+            imaging_center = "54-2.0", visit_date = "53-2.0",
+            EduAge_1 = "845-0.0", EduAge_2 = "845-1.0", EduAge_3image = "845-2.0",
+            WM_hyper = "25781-2.0", CSF_norm = "25003-2.0", TBV_norm = "25009-2.0", 
+            lSA = "26721-2.0", lCT = "26755-2.0", rSA = "26822-2.0", rCT = "26856-2.0")
+cols_remove = c("54-0.0", "54-1.0", "54-3.0", "53-0.0", "53-1.0", "53-3.0", # I don't care about site visits that aren't imaging
+                "25921-3.0", "25922-3.0", "25928-3.0", "25925-3.0", "26500-3.0", #followup confounds
+                "190-0.0", # reasons for lost followup
+                "135-0.0", "135-1.0", "135-2.0", "135-3.0", # mistakenly given to me; instead on an imaging category
+                "25781-3.0","25003-3.0", "25009-3.0", "26721-3.0", "26755-3.0", "26822-3.0", "26856-3.0") #followup Y's)
+
+fullset[, (cols_remove):=NULL]
+fullset <- rename(fullset, all_of(namevar))
+
+# trying new thing 
+# now lets only include 10 years Sept 1947 until Aug 1967
+fullset <- fullset %>% 
+  mutate(running_var = ym(str_c(year, "-", month))) %>% 
+  filter(between(running_var, ym('1947-09'), ym('1967-08'))) # as.date('1947-09-01')
+
+# missing headmotion and GEOGRAPHICAL area
+witte_UK_headmotion <- witte_UK_headmotion %>% 
+  mutate(UKbirth = coalesce(`1647-2.0`, `1647-1.0`, `1647-0.0`)) %>% 
+  mutate(UKbirth = UKbirth %in% c(1,2,3)) %>% #England, Wales, Scotland
+  rename("headmotion" = `24419-2.0`) %>% 
+  select(eid, headmotion, UKbirth)
+fullset <- witte_UK_headmotion[fullset, on = "eid"] #joining it to fullset
+# must be born in England, Wales or Scotland
+fullset <- fullset[UKbirth==TRUE]
+
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+#### 1.2 making a running var ####
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+
+fullset <- fullset %>% 
+  # mutate(running_var = ym(str_c(year, "-", month))) %>% # right now running_var is DOB in Year-Month (done above)
+  mutate(birth_quarters = interval(ym("1957-9"), running_var) %/% months(3), # Sept 1957 is the DOB of the effected cohort
+         running_var1959 = interval(ym("1959-9"),running_var) %/% months(1), # 2 years up
+         running_var1955 = interval(ym("1955-9"),running_var) %/% months(1), # 2 years down
+         running_var = interval(ym("1957-9"), running_var) %/% months(1), # making the running var actually a running var centered on Sept 1957
+         visit_day_correct = interval(ymd(min(fullset$visit_date, na.rm = T)), ymd(fullset$visit_date)) %/% days(1), # the amount of days away from the min subject
+         visit_day_correct2 = visit_day_correct^2) # quad effect of # of scan days
+
+# recoding values to missing
+## EduAge
+# -2	Never went to school
+# -1	Do not know
+# -3	Prefer not to answer
+
+# recode was complicated.. so I used data.table instead
+fullset[, c("EduAge_1", "EduAge_2", "EduAge_3image") := # assigning these columns the same name
+          lapply(.SD, function(x) replace(x, which(x %in% c(-3,-2,-1)), NA)), # replace the values -3,-2,-1 with NA
+        .SDcols = c("EduAge_1", "EduAge_2", "EduAge_3image")] # for these columns
+
+fullset <- fullset %>% 
+  mutate(EduAge = coalesce(EduAge_3image, EduAge_2, EduAge_1)) %>% # find the first non-missing column in imaging followup, followup1 or T1
+  select(-c(EduAge_3image, EduAge_2, EduAge_1)) # remove these cols
+
+# Qualifications (6138-instance-array) are coded in the wrong direction
+# https://github.com/margotvandeweijer/EA_causality/blob/main/1.%20Clean%20Data/2_clean_education.R
+# instance is the followup 3 is equal to neuroimaging wave 1; array allows them to answer multiple
+# 1	College or University degree
+# 2	A levels/AS levels or equivalent
+# 3	O levels/GCSEs or equivalent
+# 4	CSEs or equivalent
+# 5	NVQ or HND or HNC or equivalent
+# 6	Other professional qualifications eg: nursing, teaching
+# -7	None of the above
+# -3	Prefer not to answer
+
+# I don't care about their Quals, YET those that went to college weren't asked how many years they went to Education for!!!
+fullset <- fullset %>% 
+  mutate(EduAge = ifelse(if_any(matches("6138"), ~.x %in% c(1)), # if anyone ever reports college (value =1 ); one is equal to college
+                                    21, EduAge)) %>% # than make it 21 years in EduAge (the age left education)
+  select(-matches("6138")) # remove all 6138 cols
+
+# last thing is making a dummy if someone has 16 years of Education or more because it is fuzzy
+# local linear RD
+# stage 1: EduAge16 ~ running_var + ROSLA_treat + running_var:ROSLA_treat
+# stage2: Y ~ running_var + EduAge16_fitted + running_var:EduAge16_fitted
+fullset$EduAge16 <- fullset$EduAge >= 16
+table(fullset$EduAge)
+
+# making sites dummy coded
+fullset <- fastDummies::dummy_cols(fullset, select_columns = "imaging_center", remove_first_dummy = TRUE)
+
+# a summer dummy, since these people could technically end at 15 (but had the same amount of school)
+fullset$summer <- as.numeric(fullset$month %in% c(7,8)) # (July + Aug)
+
+# making global vars
+fullset$SA <- fullset$lSA + fullset$rSA
+fullset$CT <- fullset$lCT + fullset$rCT
+
+# this is the confounded analysis
+# summary(lm(SA ~ EduAge, data = fullset))
+# summary(lm(CT ~ EduAge, data = fullset))
+
+# adding mean global weighted FA (comes from 2_ContinuityROI.R)
+fullset <- wFA[fullset, on ="eid"]
+
+### saving the result
+# data.table::fwrite(fullset, "/Volumes/home/lifespan/nicjud/UKB/proc/20240223_fullset.csv")
+
+
+
+
+
+
+# issue of visit days vs Running var & DOB
+
+cor(fullset$visit_day_correct, fullset$running_var, use = "pairwise.complete.obs")
+cor(fullset$visit_day_correct, fullset$year, use = "pairwise.complete.obs")
+
+ggplot(fullset, aes(visit_day_correct, running_var)) +
+  geom_point(alpha = .1) +
+  geom_smooth()
+
+
+visit_day_correct ~ EduAge16 | running_var
+
+cor(sa$visit_day_correct, sa$running_var, use = "pairwise.complete.obs")
+
+sa$ROSLA <- sa$running_var >0 #this is the NatEx grouped
+
+summary(lm(ROSLA ~ visit_day_correct, data =sa))
+cor(sa$visit_day_correct, sa$running_var, use = "pairwise.complete.obs")
+
+
+
+
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+#### 1.3 plotting ####
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+
+
+RDHonest::RDScatter(SA~birth_quarters, data = fullset, avg = Inf, propdotsize = T, vert = T)
+RDHonest::RDScatter(CT~birth_quarters, data = fullset, avg = Inf, propdotsize = T, vert = T)
+RDHonest::RDScatter(WM_hyper~birth_quarters, data = fullset, avg = Inf, propdotsize = T, vert = T)
+RDHonest::RDScatter(CSF_norm~birth_quarters, data = fullset, avg = Inf, propdotsize = T, vert = T)
+RDHonest::RDScatter(TBV_norm~birth_quarters, data = fullset, avg = Inf, propdotsize = T, vert = T)
+
+
+RDHonest::RDScatter(EduAge~running_var, data = fullset, avg = Inf, propdotsize = T, vert = T)
+RDHonest(EduAge ~ running_var, fullset)
+
+RDHonest::RDScatter(visit_day_correct~birth_quarters, data = fullset, avg = Inf, propdotsize = T, vert = T)
+
+
+rdrobust::rdplot(fullset$SA, fullset$running_var)
+rdrobust::rdplot(fullset$CT, fullset$running_var)
+rdrobust::rdplot(fullset$TBV_norm, fullset$running_var)
+rdrobust::rdplot(fullset$WM_hyper, fullset$running_var)
+rdrobust::rdplot(fullset$CSF_norm, fullset$running_var)
+
+rdrobust::rdplot(fullset$EduAge, fullset$running_var)
+rdrobust::rdplot(fullset$visit_day_correct, fullset$running_var)
+
+
+ggplot(fullset, aes(x = year)) +
+  geom_histogram(bins = length(unique(fullset$year))) +
+  geom_vline(xintercept = 1947, color = "red") +
+  geom_vline(xintercept = 1967, color = "red")
+
+
+# okay now that you have excluded everyone you can make the imaging date cov
+# witte_vars_sa <- witte_vars_sa %>% 
+#   mutate(running_var = ym(str_c(year, "-", month))) %>% 
+#   mutate(birth_quarters = interval(ym("1957-9"),running_var) %/% months(3),
+#          running_var = interval(ym("1957-9"),running_var) %/% months(1),
+#          visit_day_correct = interval(ymd(min(witte_vars_sa$visit_date)), ymd(witte_vars_sa$visit_date)) %/% days(1),
+#          visit_day_correct2 = visit_day_correct^2) %>%
+#   mutate(EduAge = coalesce(EduAge_3image, EduAge_2, EduAge_1)) %>% # maybe take the max response
+#   select(-c(EduAge_3image, EduAge_2, EduAge_1)) %>% 
+#   select(-matches("6138")) #dropping the qualifications for now; 
+#   # BUT those with college don't have EduAge; so you need to readd them!!!*
+
+
+# checking my work
+# head(witte_vars_sa[witte_vars_sa$running_var==0,])
+# unique(witte_vars_sa[witte_vars_sa$running_var==0]$year)
+# unique(witte_vars_sa[witte_vars_sa$running_var==0]$month) # zero equals treatment, which works with RDHonest (yet not rdrobust)
+
+
+
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+#### 1.4 fuzzy RD for global vars   ####
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+
+# not allowing missing in SA (Y), running_var or EduAge16
+
+covs <- c("sex", "t2_FLAIR", "visit_day_correct", "visit_day_correct2", "headmotion", "summer",
+          "imaging_center_11026", "imaging_center_11027", "imaging_center_11028", 
+           "dMRI_25922_1", "dMRI_25921_1", "dMRI_25928_1")
+covs_fence <- c("dMRI_25922_1", "dMRI_25921_1", "dMRI_25928_1")
+cols = c("EduAge16", "running_var", covs)
+
+# ct <- ct[,(col_fence.s) := lapply(.SD, vec_to_fence), .SDcols=col_fence.s]
+
+
+# effect of covs
+
+dim(fullset)
+
+# summary(lm(paste(c("SA ~ acq_time", covs), collapse=" + "), data = fullset))
+# summary(lm(paste(c("CT ~ acq_time", covs), collapse=" + "), data = fullset))
+# summary(lm(paste(c("WM_hyper ~ acq_time", covs), collapse=" + "), data = fullset))
+# summary(lm(paste(c("CSF_norm ~ acq_time", covs), collapse=" + "), data = fullset))
+# summary(lm(paste(c("TBV_norm ~ acq_time", covs), collapse=" + "), data = fullset))
+
+sa <- fullset[, c("SA", cols), with=FALSE]
+ct = fullset[, c("CT", cols), with=FALSE]
+WMh = fullset[, c("WM_hyper", cols), with=FALSE]
+CSFn = fullset[, c("CSF_norm", cols), with=FALSE]
+TBVn = fullset[, c("TBV_norm", cols), with=FALSE]
+wFAs = fullset[, c("wFA", cols), with=FALSE] # wFAs; s for subset since you already have a wFA DT
+
+# not allowing any missing in Y, running or instrument
+sa <- sa[complete.cases(sa[, .(SA, running_var, EduAge16)]),][ # no missingness allows in Y, running, or IV
+  ,c("SA", covs_fence) := lapply(.SD, vec_to_fence), .SDcols=c("SA", covs_fence)] # fencing covs with error & Y
+ct <- ct[complete.cases(ct[, .(CT, running_var, EduAge16)]),][ 
+  ,c("CT", covs_fence) := lapply(.SD, vec_to_fence), .SDcols=c("CT", covs_fence)]
+WMh <- WMh[complete.cases(WMh[, .(WM_hyper, running_var, EduAge16)]),][ 
+  ,c("WM_hyper", covs_fence) := lapply(.SD, vec_to_fence), .SDcols=c("WM_hyper", covs_fence)]
+CSFn <- CSFn[complete.cases(CSFn[, .(CSF_norm, running_var, EduAge16)]),][ 
+  ,c("CSF_norm", covs_fence) := lapply(.SD, vec_to_fence), .SDcols=c("CSF_norm", covs_fence)]
+TBVn <- TBVn[complete.cases(TBVn[, .(TBV_norm, running_var, EduAge16)]),][ 
+  ,c("TBV_norm", covs_fence) := lapply(.SD, vec_to_fence), .SDcols=c("TBV_norm", covs_fence)]
+wFAs <- wFAs[complete.cases(wFAs[, .(wFA, running_var, EduAge16)]),][ 
+  ,c("wFA", covs_fence) := lapply(.SD, vec_to_fence), .SDcols=c("wFA", covs_fence)]
+
+# *** check that the fencing works as expected (on the Y & covs_fence)
+# *** how does it deal with NA's?
+
+# checking missingness in covs
+# are they complete?
+dim(sa)[1] == sum(complete.cases(sa))
+dim(ct)[1] == sum(complete.cases(ct))
+dim(WMh)[1] == sum(complete.cases(WMh))
+dim(CSFn)[1] == sum(complete.cases(CSFn))
+dim(TBVn)[1] == sum(complete.cases(TBVn))
+
+
+# missing dMRI covs
+sa = sa[complete.cases(sa),] #34010 to 32102
+ct = ct[complete.cases(ct),] #same as SA
+# Fuck these 3 have missingness in other Covs
+WMh = WMh[complete.cases(WMh),] #32676 to 31698
+CSFn = CSFn[complete.cases(CSFn),] #33634 to 32102
+TBVn = TBVn[complete.cases(TBVn),] #33634 to 32102
+wFAs = wFAs[complete.cases(wFAs),]
+
+
+m1_sa_fuzzy = RDjacked("SA", "running_var", fuzzy = 'EduAge16', df = sa, covs = covs) #352 t2_FLAIR
+m2_ct_fuzzy = RDjacked("CT", "running_var", fuzzy = 'EduAge16', df = ct, covs = covs) #same as above
+m3_WMh_fuzzy = RDjacked("WM_hyper", "running_var", fuzzy = 'EduAge16', df = WMh, covs = covs[covs != "t2_FLAIR"]) # only 2 occassions
+m4_CSFn_fuzzy = RDjacked("CSF_norm", "running_var", fuzzy = 'EduAge16', df = CSFn, covs = covs) #352 t2_FLAIR
+m5_TBVn_fuzzy = RDjacked("TBV_norm", "running_var", fuzzy = 'EduAge16', df = TBVn, covs = covs) #352 t2_FLAIR
+m6_wFA_fuzzy = RDjacked("wFA", "running_var", fuzzy = 'EduAge16', df = wFAs, covs = covs) # only 37 occassions
+
+global_results <- rbind(m1_sa_fuzzy, m2_ct_fuzzy, m3_WMh_fuzzy, m4_CSFn_fuzzy, m5_TBVn_fuzzy, m6_wFA_fuzzy)
+
+# global_results %>% #saving the results
+#   kbl(caption = "Global neuroimaging results") %>%
+#   kable_styling("hover", full_width = F) %>%
+#   save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/global_results.html")
+
+
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+#### 1.5 Assumptions - Checking the RD design #### 
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+
+# for these tests, I obviously want to use the sample I analyzed (the neuroimaging followup; instance 2)
+# I select these subjects by filtering by visit date, which is only instance 2
+# fullset[!is.na(fullset$visit_date),]
+
+# Density of the running variable, silly test for ROSLA
+# rddensity: all statistics & default options
+# it is assuming something not great about zero; redoing the running var to fix this
+fullset$running_var_SHIFT <- fullset$running_var # shifting positive values by 1; so 0 -> 1, etc etc...
+fullset$running_var_SHIFT[fullset$running_var_SHIFT >=0] <- fullset$running_var_SHIFT[fullset$running_var_SHIFT >=0] +1
+
+dens_test <- rddensity(X = fullset$running_var_SHIFT[!is.na(fullset$visit_date)]) 
+#^^^** gonna have to figure out how to report this; since you can't extract it
+
+# testing the covariates
+simple_fuzzy <- function(f, dt){
+  p0 <- RDHonest(f, data = dt)
+  p1 <- RDHonest(f, data = dt, T0 = p1.0$coefficients$estimate) #as seen in the vinjette; giving a starting val
+  out <- p1$coefficients[c("term", "bandwidth", "eff.obs", "estimate", "conf.low", "conf.high", "p.value")]
+  out[2:6] <- round(out[2:6], 2) #rounding; not the p because I will FDR
+  out$term = f # adding the forumula to the output
+  return(out)
+}
+
+covs %>% 
+  str_c(., " ~ EduAge16 | running_var") %>% #making a forumula from the covs
+  map_dfr(~simple_fuzzy(., dt = fullset[!is.na(fullset$visit_date),])) %>% #RDHonest automatically listwise deletes
+  mutate(pFDR = round(p.adjust(p.value, method = 'fdr'), 3),
+         p.value = round(p.value, 3)) %>% 
+  kbl(caption = "Placebo Outcomes from the covs of no interest") %>%
+  kable_styling("hover", full_width = F) %>%
+  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/placebo_outcomes.html")
+  
+# looking closer into summer, need to be donut holed removing running var 7,8,9,10 of 1957
+summer0 <- RDHonest(summer ~ EduAge16 | running_var, data = fullset[!is.na(fullset$visit_date),])
+summer1 <- RDHonest(summer ~ EduAge16 | running_var, data = fullset[!is.na(fullset$visit_date),], T0 = summer0$coefficients$estimate)
+
+# I think it wants to running var remapped
+twoDonuts <- fullset[!fullset$running_var %in% c(-2,-1, 0, 1),]
+twoDonuts$running_var[twoDonuts$running_var >=0] <- twoDonuts$running_var[twoDonuts$running_var >=0] -2
+twoDonuts$running_var[twoDonuts$running_var <0] <- twoDonuts$running_var[twoDonuts$running_var <0] +2
+table(twoDonuts$running_var)
+
+summerD0 <- RDHonest(summer ~ EduAge16 | running_var, data = twoDonuts[!is.na(twoDonuts$visit_date),])
+summerD1 <- RDHonest(summer ~ EduAge16 | running_var, data = twoDonuts[!is.na(twoDonuts$visit_date),], T0 = summerD0$coefficients$estimate)
+
+
+# moving the running var is used commonly; yet we have no sig result to test...
+
+
