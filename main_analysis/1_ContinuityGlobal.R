@@ -28,7 +28,7 @@ if (!require(pacman)){
 }
 
 # grab functions
-source("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/R_scripts/0_functions.R") 
+source("~/projects/roslaUKB/main_analysis/0_functions.R") 
 # function: vec_to_fence() takes a vector and puts outliers to the fence (i.e., boxplot.stats)
 # function: RDjacked() for cov corrected fuzzy RD
 
