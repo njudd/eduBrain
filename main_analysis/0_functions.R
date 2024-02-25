@@ -145,10 +145,10 @@ RDjacked <- function(y, running, fuzzy, df, covs = NULL) {
 # plan(multisession, workers = 6) # THIS WORKS
 # nkj <- future_map2(IVs, DVs, \(x, y) bayesFIT(x, y, b1_covs, b1), .options = furrr_options(seed = T))
 
-bayesFIT <- function(iv, dv, covs, df){
+bayesFIT <- function(dv, iv, covs, df){
   # fit the model
   
-  f <- eval(parse(text = paste0(c(paste(iv, "~", dv), covs), collapse=" + ")))
+  f <- eval(parse(text = paste0(c(paste(dv, "~", iv), covs), collapse=" + ")))
   #^^^ this is needed for bayesfactor_parameters in bayes_to_results()
   m <- stan_glm(f, data = df, iter = 80000, refresh=0) #40000
     # assign it
