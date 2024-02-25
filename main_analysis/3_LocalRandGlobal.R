@@ -170,62 +170,6 @@ ggplot(sa_post, aes(1, posterior, fill = iv, color = iv)) +
   
 
 
-
-  
-
-
-
-
-
-bayesfactor_parameters(ct[[1]])
-
-
-# b1SA_p <- get_parameters(b1SA)
-# b1CT_p <- get_parameters(b1CT)
-# b1CSF_p <- get_parameters(b1CSF)
-# b1TBV_p <- get_parameters(b1TBV)
-# b1WMh_p <- get_parameters(b1WMh)
-# ggplot(m1SAp, aes(x = ROSLATRUE)) +
-#   geom_density(fill = "red")
-
-bayes_inference <- function(mod, param){
-  
-  posterior <- eval(parse(text=paste0("get_parameters(", r, ")$",v)))
-  h <- hdi(posterior)
-  
-  bf <- eval(parse(text=paste0("bayesfactor_parameters(", r, ", null =0)")))
-  
-  df <- data.frame(model = mod, term = param, mean = mean(posterior), 
-                   median = median(posterior), 
-                   hdi_95 = paste0("[", round(h$CI_low, 2), ", ", round(h$CI_high, 2), "]"),
-                   logBF = bf$log_BF[bf$Parameter == param])
-  
-  return(df)
-}
-
-g <- c("b1SA", "b1CT") %>% 
-  future_map(~bayes_inference(., "ROSLATRUE")) 
-
-g %>% list_rbind()
-  
-  
-
-
-bayes_inference("b1SA", "ROSLATRUE")
-
-
-b1SA_bf <- bayesfactor_parameters(b1SA, null = 0)
-b1CT_bf <- bayesfactor_parameters(b1CT, null = 0)
-b1CSF_bf <- bayesfactor_parameters(b1CSF, null = 0)
-b1TBV_bf <- bayesfactor_parameters(b1TBV, null = 0)
-b1WMh_bf <- bayesfactor_parameters(b1WMh, null = 0)
-
-b1SA_bf$log_BF[2]; b1CT_bf$log_BF[2]; b1CSF_bf$log_BF[2]; b1TBV_bf$log_BF[2]; b1WMh_bf$log_BF[2]
-
-b1SA_bf_CON <- bayesfactor_parameters(b1SA_confound, null = 0)
-b1SA_bf_CON$log_BF[2]
-
-
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 #### 3.4 6 month window analysis ####
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
