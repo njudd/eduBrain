@@ -6,8 +6,8 @@
 ### Table of Contents
 # 3.1 Packages & data from 1_ContinutyGlobal.R
 # 3.2 1 month window analysis
-# 3.3 1 month window plotting
-# 3.4 
+# 3.3 1 month window plotting & diagnostics
+# 3.4 6 month window analysis
 # 3.5 
 # 3.6 misc
 #### ### ----------------- ### ####
@@ -73,20 +73,7 @@ hdi(first_stage)
 first_stage_bf <- bayesfactor_parameters(first_stage, null = 0)
 first_stage_bf$log_BF[2]
 
-# you now automate this whole process
-# b1SA <- stan_glm(paste0(c("SA ~ ROSLA", b1_covs), collapse=" + "), data = b1, iter = 40000)
-# b1CT <- stan_glm(paste0(c("CT ~ ROSLA", b1_covs), collapse=" + "), data = b1, iter = 40000)
-# b1CSF <- stan_glm(paste0(c("CSF_norm ~ ROSLA", b1_covs), collapse=" + "), data = b1, iter = 40000)
-# b1TBV <- stan_glm(paste0(c("TBV_norm ~ ROSLA", b1_covs), collapse=" + "), data = b1, iter = 40000)
-# b1WMh <- stan_glm(paste0(c("WM_hyper ~ ROSLA", b1_covs), collapse=" + "), data = b1, iter = 40000)
-# b1wFA <- stan_glm(paste0(c("wFA ~ ROSLA", b1_covs), collapse=" + "), data = b1, iter = 40000)
-# b1SA_confound <- stan_glm(paste0(c("SA ~ EduAge", b1_covs), collapse=" + "), data = b1, iter = 40000)
-# b1CT_confound <- stan_glm(paste0(c("CT ~ EduAge", b1_covs), collapse=" + "), data = b1, iter = 40000)
-# b1CSF_confound <- stan_glm(paste0(c("CSF_norm ~ EduAge", b1_covs), collapse=" + "), data = b1, iter = 40000)
-# b1TBV_confound <- stan_glm(paste0(c("TBV_norm ~ EduAge", b1_covs), collapse=" + "), data = b1, iter = 40000)
-# b1WMh_confound <- stan_glm(paste0(c("WM_hyper ~ EduAge", b1_covs), collapse=" + "), data = b1, iter = 40000)
-# b1wFA_confound <- stan_glm(paste0(c("wFA ~ EduAge", b1_covs), collapse=" + "), data = b1, iter = 40000)
-
+# rather than individually fitting 12 STAN models, we will paralize it with future_map2
 # how map2 works
 # x <- list(1, 1, 1)
 # y <- list(10, 20, 30)
@@ -99,10 +86,10 @@ plan(multisession, workers = 6) # THIS WORKS
 modB1 <- future_map2(IVs, DVs, \(x, y) bayesFIT(x, y, b1_covs, b1),
                    .options = furrr_options(seed = T))
 
-bayes_to_results(modB1) %>% 
-  kbl(caption = "One Month Bandwidth Bayesian Analysis") %>%
-  kable_styling("hover", full_width = F) %>% 
-  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/Bayes1m.html")
+# bayes_to_results(modB1) %>%
+#   kbl(caption = "One Month Bandwidth Bayesian Analysis") %>%
+#   kable_styling("hover", full_width = F) %>%
+#   save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/Bayes1m.html")
 
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
@@ -239,25 +226,36 @@ b1SA_bf_CON <- bayesfactor_parameters(b1SA_confound, null = 0)
 b1SA_bf_CON$log_BF[2]
 
 
-# half-year window 6:5
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+#### 3.4 6 month window analysis ####
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 
 b6 <- fullset[running_var %in% c(-6:5)][
   , ROSLA := running_var >= 0
+][
+  !is.na(visit_date) #must be an imaging subjects (visit date instance 2)
 ]
 
-b6SA <- stan_glm(SA ~ ROSLA, data = b6, iter = 40000)
-b6CT <- stan_glm(CT ~ ROSLA, data = b6, iter = 40000)
-b6CSF <- stan_glm(CSF_norm ~ ROSLA, data = b6, iter = 40000)
-b6TBV <- stan_glm(TBV_norm ~ ROSLA, data = b6, iter = 40000)
-b6WMh <- stan_glm(WM_hyper ~ ROSLA, data = b6, iter = 40000)
+covs[!covs %in% b1_covs]
 
-b6SA_bf <- bayesfactor_parameters(b6SA, null = 0)
-b6CT_bf <- bayesfactor_parameters(b6CT, null = 0)
-b6CSF_bf <- bayesfactor_parameters(b6CSF, null = 0)
-b6TBV_bf <- bayesfactor_parameters(b6TBV, null = 0)
-b6WMh_bf <- bayesfactor_parameters(b6WMh, null = 0)
+# table(b6$imaging_center_11028) # this is doable...
 
-b6SA_bf$log_BF[2]; b6CT_bf$log_BF[2]; b6CSF_bf$log_BF[2]; b6TBV_bf$log_BF[2]; b6WMh_bf$log_BF[2]
+b6_covs <- c(b1_covs, "imaging_center_11028")
+
+plan(multisession, workers = 6) # THIS WORKS
+modB6 <- future_map2(IVs, DVs, \(x, y) bayesFIT(x, y, b6_covs, b6),
+                     .options = furrr_options(seed = T))
+
+modB6 %>% 
+future_map(~bayes_to_results(list(.))) %>%
+  kbl(caption = "Six Month Bandwidth Bayesian Analysis") %>%
+  kable_styling("hover", full_width = F) %>%
+  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/Bayes6m.html")
+
+
+
+
+
 
 
 # so it didn't work with a month bracket, yet does with half a year
