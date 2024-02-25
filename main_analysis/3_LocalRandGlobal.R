@@ -15,8 +15,13 @@
 
 #### notes
 
-# some covs are meaningless since they have no variance 
-# like "summer"; "FLAIR"
+# map & map2 are used a lot for parallelization; they are pretty much for loops with lists
+# map2 takes two lists (of equal lenght & itterates thru them in order)
+# https://data-se.netlify.app/2021/02/06/plotting-multiple-plots-using-purrr-map-and-ggplot/
+# how map2 works
+# x <- list(1, 1, 1)
+# y <- list(10, 20, 30)
+# map2(x, y, \(x, y) x + y)
 
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
@@ -62,7 +67,8 @@ b1 <- fullset[running_var %in% c(-1,0)][
 
 # table(b1$month); table(b1$ROSLA) #checking that it really is the right number and groups
 
-# no variance for the following covs
+# "we will use the same covariates used in the local linear analysis yet they will be entered in the model"
+# was not possible for the following covs due to no variance
 b1_covs <- covs[!covs %in% c("summer", "t2_FLAIR", "imaging_center_11028")]
 
 # first we need to establish that there are more likely in this narrow window to stay until 16
@@ -74,43 +80,34 @@ first_stage_bf <- bayesfactor_parameters(first_stage, null = 0)
 first_stage_bf$log_BF[2]
 
 # rather than individually fitting 12 STAN models, we will paralize it with future_map2
-# how map2 works
-# x <- list(1, 1, 1)
-# y <- list(10, 20, 30)
-# map2(x, y, \(x, y) x + y)
-
 DVs <- rep(c("SA", "CT", "CSF_norm", "TBV_norm", "WM_hyper", "wFA"), each = 2) #amazing 
 IVs <- rep(c("ROSLA", "EduAge"), 6)
 
-plan(multisession, workers = 6) # THIS WORKS
+plan(multisession, workers = 6) # Look at the start of the script for a map2 explanation
 modB1 <- future_map2(DVs, IVs, \(y, x) bayesFIT(y, x, b1_covs, b1),
                    .options = furrr_options(seed = T))
 
 # bayes_to_results(modB1) %>%
 #   kbl(caption = "One Month Bandwidth Bayesian Analysis") %>%
 #   kable_styling("hover", full_width = F) %>%
-#   save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/1mBayes.html")
+#   save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/localRand/1mBayes.html")
 
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 #### 3.3 1 month window diagnostics and plotting ####
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 
-# https://data-se.netlify.app/2021/02/06/plotting-multiple-plots-using-purrr-map-and-ggplot/
-# how map2 works
-# x <- list(1, 1, 1)
-# y <- list(10, 20, 30)
-# map2(x, y, \(x, y) x + y)
-
 # first testing the covariates again in the 1mnth window...
-
+# "we will analyze predetermined covariates and placebo outcomes similarly to the local-linear approach"
 b1CovTest <- b1_covs %>%
   future_map(~bayesFIT(., "ROSLA", covs = c(), b1), .options = furrr_options(seed = T)) %>% 
   future_map_dfr(~bayes_to_results(list(.))) %>%
   kbl(caption = "1 Month Bandwidth Covariates Bayesian Test") %>%
   kable_styling("hover", full_width = F) %>%
-  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/1mBayes_cov.html")
+  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/localRand/1mBayes_cov.html")
 
+# by moving the cutoff up a year (Sept. 1958), up two years (Sept. 1959), down a year (Sept. 1956), and down two years (Sept. 1955). 
+# This doesn't make much sense if you don't have an effect... so we will not do it
 
 # plotting and saving trace plots
 plt_name_trace <- str_c("Trace plot BayesLocal (1 mnth) of", IVs," on ", DVs)
@@ -190,10 +187,14 @@ b6 <- fullset[running_var %in% c(-6:5)][
   !is.na(visit_date) #must be an imaging subjects (visit date instance 2)
 ]
 
+first_stage6 <- stan_glm("EduAge16 ~ running_var", data = b6, iter = 40000)
+hdi(first_stage6)
+first_stage_bf6 <- bayesfactor_parameters(first_stage6, null = 0)
+first_stage_bf6$log_BF[2]
+
+# taking as many covs as possible from the cont. approach
 covs[!covs %in% b1_covs]
-
 # table(b6$imaging_center_11028) # this is doable...
-
 b6_covs <- c(b1_covs, "imaging_center_11028")
 
 plan(multisession, workers = 6) # THIS WORKS
@@ -204,14 +205,24 @@ modB6 %>%
   future_map_dfr(~bayes_to_results(list(.))) %>%
   kbl(caption = "Six Month Bandwidth Bayesian Analysis") %>%
   kable_styling("hover", full_width = F) %>%
-  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/6mBayes.html")
+  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/localRand/6mBayes.html")
 
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 #### 3.4 6 month window diagnostics and plotting ####
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 
+# first testing the covariates again in the 6mnth window...
+# "we will analyze predetermined covariates and placebo outcomes similarly to the local-linear approach"
 
+b6_covs %>%
+  future_map(~bayesFIT(., "ROSLA", covs = c(), b6), .options = furrr_options(seed = T)) %>% 
+  future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) %>%
+  kbl(caption = "6 Month Bandwidth Covariates Bayesian Test") %>%
+  kable_styling("hover", full_width = F) %>%
+  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/localRand/6mBayes_cov.html")
+
+# again no point in moving the window up or down a year since there are no sig results to disprove/test
 
 
 
@@ -236,41 +247,14 @@ bMaxSA_bf$log_BF[2]
 
 
 
-#  we will use the same covariates used in the local linear analysis yet they will be entered in the model.
-
-
-
-# by moving the cutoff up a year (Sept. 1958), up two years (Sept. 1959), down a year (Sept. 1956), and down two years (Sept. 1955). 
-# This doesn't make much sense if you don't have an effect...
 
 
 
 
 
 
-# Secondly, we will analyze predetermined covariates and placebo outcomes similarly to the local-linear approach
 
-c1 <- stan_glm(sex ~ ROSLA, data = b1, iter = 40000)
-c1_bf <- bayesfactor_parameters(c1, null = 0); c1_bf$log_BF[2]
 
-c2.1 <- stan_glm(visit_day_correct ~ ROSLA, data = b1, iter = 40000)
-c2.1_bf <- bayesfactor_parameters(c2.1, null = 0); c2.1_bf$log_BF[2]
-c2.2 <- stan_glm(visit_day_correct ~ ROSLA, data = b1, iter = 40000)
-c2.2_bf <- bayesfactor_parameters(c2.2, null = 0); c2.2_bf$log_BF[2]
-
-c3.1 <- stan_glm(imaging_center_11026 ~ ROSLA, data = b1, iter = 40000)
-c3.1_bf <- bayesfactor_parameters(c3.1, null = 0); c3.1_bf$log_BF[2]
-c3.2 <- stan_glm(imaging_center_11027 ~ ROSLA, data = b1, iter = 40000)
-c3.2_bf <- bayesfactor_parameters(c3.2, null = 0); c3.2_bf$log_BF[2]
-# c3.3 <- stan_glm(imaging_center_11028 ~ ROSLA, data = b1, iter = 40000)
-# c3.3_bf <- bayesfactor_parameters(c3.3, null = 0); c3.3_bf$log_BF[2]
-
-c4.1 <- stan_glm(dMRI_25922_1 ~ ROSLA, data = b1, iter = 40000)
-c4.1_bf <- bayesfactor_parameters(c4.1, null = 0); c4.1_bf$log_BF[2]
-c4.2 <- stan_glm(dMRI_25921_1 ~ ROSLA, data = b1, iter = 40000)
-c4.2_bf <- bayesfactor_parameters(c4.2, null = 0); c4.2_bf$log_BF[2]
-c4.3 <- stan_glm(dMRI_25928_1 ~ ROSLA, data = b1, iter = 40000)
-c4.3_bf <- bayesfactor_parameters(c4.3, null = 0); c4.3_bf$log_BF[2]
 
 
 
