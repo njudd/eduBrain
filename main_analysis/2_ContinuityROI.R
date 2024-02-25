@@ -134,7 +134,7 @@ sum(sa_results$pfdr < .05) # anything sig?
 sa_results %>% 
   kbl(caption = "Surface Area ROI results") %>%
   kable_styling("hover", full_width = F) %>% 
-  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/sa_results.html")
+  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/RDcont/sa_results.html")
 
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
@@ -184,7 +184,7 @@ sum(ct_results$pfdr < .05)
 ct_results %>% 
   kbl(caption = "Cortical thickness ROI results") %>%
   kable_styling("hover", full_width = F) %>% 
-  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/ct_results.html")
+  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/RDcont/ct_results.html")
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 #### 2.4 weighted FA regional fuzzy RD ####
@@ -238,7 +238,7 @@ sum(wFA_results$pfdr < .05) # anything sig?
 wFA_results %>% 
   kbl(caption = "weighted FA ROI results") %>%
   kable_styling("hover", full_width = F) %>% 
-  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/wfa_results.html")
+  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/RDcont/wfa_results.html")
 
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
@@ -291,5 +291,5 @@ sum(sROI_results$pfdr < .05) # anything sig?
 sROI_results %>% 
   kbl(caption = "Subcortical Vol results") %>%
   kable_styling("hover", full_width = F) %>% 
-  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/sub_results.html")
+  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/RDcont/sub_results.html")
 
