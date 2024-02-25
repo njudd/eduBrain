@@ -8,7 +8,7 @@
 # 3.2 1 month window analysis
 # 3.3 1 month window plotting & diagnostics
 # 3.4 6 month window analysis
-# 3.5 
+# 3.5 6 month window plotting & diagnostics
 # 3.6 misc
 #### ### ----------------- ### ####
 
@@ -79,27 +79,38 @@ first_stage_bf$log_BF[2]
 # y <- list(10, 20, 30)
 # map2(x, y, \(x, y) x + y)
 
-IVs <- rep(c("SA", "CT", "CSF_norm", "TBV_norm", "WM_hyper", "wFA"), each = 2) #amazing 
-DVs <- rep(c("ROSLA", "EduAge"), 6)
+DVs <- rep(c("SA", "CT", "CSF_norm", "TBV_norm", "WM_hyper", "wFA"), each = 2) #amazing 
+IVs <- rep(c("ROSLA", "EduAge"), 6)
 
 plan(multisession, workers = 6) # THIS WORKS
-modB1 <- future_map2(IVs, DVs, \(x, y) bayesFIT(x, y, b1_covs, b1),
+modB1 <- future_map2(DVs, IVs, \(y, x) bayesFIT(y, x, b1_covs, b1),
                    .options = furrr_options(seed = T))
 
 # bayes_to_results(modB1) %>%
 #   kbl(caption = "One Month Bandwidth Bayesian Analysis") %>%
 #   kable_styling("hover", full_width = F) %>%
-#   save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/Bayes1m.html")
+#   save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/1mBayes.html")
 
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 #### 3.3 1 month window diagnostics and plotting ####
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+
 # https://data-se.netlify.app/2021/02/06/plotting-multiple-plots-using-purrr-map-and-ggplot/
 # how map2 works
 # x <- list(1, 1, 1)
 # y <- list(10, 20, 30)
 # map2(x, y, \(x, y) x + y)
+
+# first testing the covariates again in the 1mnth window...
+
+b1CovTest <- b1_covs %>%
+  future_map(~bayesFIT(., "ROSLA", covs = c(), b1), .options = furrr_options(seed = T)) %>% 
+  future_map_dfr(~bayes_to_results(list(.))) %>%
+  kbl(caption = "1 Month Bandwidth Covariates Bayesian Test") %>%
+  kable_styling("hover", full_width = F) %>%
+  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/1mBayes_cov.html")
+
 
 # plotting and saving trace plots
 plt_name_trace <- str_c("Trace plot BayesLocal (1 mnth) of", IVs," on ", DVs)
@@ -141,7 +152,6 @@ b1SA <- stan_glm(paste0(c("SA ~ ROSLA", b1_covs), collapse=" + "), data = b1, it
 
 
 # you need to raincloud EduYears vs ROSLA...
-
 
 #### just manually extract them...
 
@@ -187,32 +197,32 @@ covs[!covs %in% b1_covs]
 b6_covs <- c(b1_covs, "imaging_center_11028")
 
 plan(multisession, workers = 6) # THIS WORKS
-modB6 <- future_map2(IVs, DVs, \(x, y) bayesFIT(x, y, b6_covs, b6),
+modB6 <- future_map2(DVs, IVs, \(y, x) bayesFIT(y, x, b6_covs, b6),
                      .options = furrr_options(seed = T))
 
 modB6 %>% 
-future_map(~bayes_to_results(list(.))) %>%
+  future_map_dfr(~bayes_to_results(list(.))) %>%
   kbl(caption = "Six Month Bandwidth Bayesian Analysis") %>%
   kable_styling("hover", full_width = F) %>%
-  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/Bayes6m.html")
+  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/6mBayes.html")
+
+
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+#### 3.4 6 month window diagnostics and plotting ####
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 
 
 
 
 
 
-
-# so it didn't work with a month bracket, yet does with half a year
-b6SA_confound <- stan_glm(SA ~ EduAge, data = b6, iter = 40000)
-b6SA_bf_CON <- bayesfactor_parameters(b6SA_confound, null = 0)
-b6SA_bf_CON$log_BF[2]
-
-
-
-
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+#### 3.5 Misc ####
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 
 
 ### fooling around to see when the age differnces between the groups start having an effect
+# essentially the age difference between the groups have an effect because of the running variable
 
 bMAX <- fullset[running_var %in% c(-65:64)][
   , ROSLA := running_var >= 0
@@ -227,8 +237,6 @@ bMaxSA_bf$log_BF[2]
 
 
 #  we will use the same covariates used in the local linear analysis yet they will be entered in the model.
-
-
 
 
 
