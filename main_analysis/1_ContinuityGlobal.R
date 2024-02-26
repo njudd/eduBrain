@@ -32,7 +32,7 @@ source("~/projects/roslaUKB/main_analysis/0_functions.R")
 # function: vec_to_fence() takes a vector and puts outliers to the fence (i.e., boxplot.stats)
 # function: RDjacked() for cov corrected fuzzy RD
 
-pacman::p_load(tidyverse, lubridate, stringr, RDHonest, fastDummies, mice, ggseg, kableExtra, rddensity)
+pacman::p_load(tidyverse, lubridate, stringr, RDHonest, fastDummies, mice, ggseg, kableExtra, rddensity, patchwork)
 
 ##### ##### ##### ##### 
 ##### helpful code!!!
@@ -297,10 +297,11 @@ global_results <- rbind(m1_sa_fuzzy, m2_ct_fuzzy, m3_WMh_fuzzy, m4_CSFn_fuzzy, m
 
 #moving plotting below so I can put the MSE derived bounds
 
-fullimage <- fullset[!is.na(visit_date)]
+# RDHonest::RDScatter(SA~birth_quarters, data = fullimage, avg = Inf, propdotsize = T, vert = T)
+# rdrobust::rdplot(fullimage$SA, fullimage$running_var, p = 3)
 
-
-SAplt <- fullimage %>% 
+# surface area
+SAplt <- sa %>% 
   group_by(running_var) %>% 
   summarise(sa = mean(SA, na.rm = T), n =n()) %>% 
   {ggplot(., aes(running_var, sa)) +
@@ -309,43 +310,125 @@ SAplt <- fullimage %>%
       geom_vline(xintercept = 0,linetype="dashed") +
       geom_smooth(data=subset(., running_var < 0), method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
       geom_smooth(data=subset(., running_var > 0), method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
-      labs(y = bquote('Monthly Surface Area'~(mm^3)), x = "Date of Birth in Months") +
-      scale_x_continuous(breaks=c(-96,-48,0,48,96),
-                         labels=c("Sept.\n1949", "Sept.\n1953", "Sept.\n1957", "Sept.\n1961", "Sept.\n1965")) +
+      labs(y = bquote('Total\nSurface Area'), x = "Date of Birth in Months") + # bquote('Total Surface Area'~(mm^3))
+      scale_x_continuous(breaks=c(-120,-60,0,60,120),
+                         labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
       ylim(c(164000, 176000)) +
       theme_minimal(base_size = 20) +
-      theme(axis.text.x= element_text(angle=45))
+      theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())
 
-    }
+  }
+
+# cortical thickness
+CTplt <- ct %>% 
+  group_by(running_var) %>% 
+  summarise(ct = mean(CT, na.rm = T), n =n()) %>% 
+  {ggplot(., aes(running_var, ct)) +
+      geom_point(data=subset(., running_var > -m2_ct_fuzzy$bandwidth & running_var < m2_ct_fuzzy$bandwidth), color = "darkblue") +
+      geom_point(data=subset(., running_var < -m2_ct_fuzzy$bandwidth | running_var  > m2_ct_fuzzy$bandwidth), color = "blue", alpha = .3) +
+      geom_vline(xintercept = 0,linetype="dashed") +
+      geom_smooth(data=subset(., running_var < 0), method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
+      geom_smooth(data=subset(., running_var > 0), method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
+      labs(y = 'Average Cortical\nThickness', x = "Date of Birth in Months") +
+      scale_x_continuous(breaks=c(-120,-60,0,60,120),
+                         labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
+      # ylim(c(164000, 176000)) +
+      theme_minimal(base_size = 20) +
+      theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())
+    
+  }
+ 
+# WMh
+WMhplt <- WMh %>% 
+  group_by(running_var) %>% 
+  summarise(WM_hyper = mean(WM_hyper, na.rm = T), n =n()) %>% 
+  {ggplot(., aes(running_var, WM_hyper)) +
+      geom_point(data=subset(., running_var > -m3_WMh_fuzzy$bandwidth & running_var < m3_WMh_fuzzy$bandwidth), color = "darkblue") +
+      geom_point(data=subset(., running_var < -m3_WMh_fuzzy$bandwidth | running_var  > m3_WMh_fuzzy$bandwidth), color = "blue", alpha = .3) +
+      geom_vline(xintercept = 0,linetype="dashed") +
+      geom_smooth(data=subset(., running_var < 0), method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
+      geom_smooth(data=subset(., running_var > 0), method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
+      labs(y = 'White Matter\nHyperintensities', x = "Date of Birth in Months") +
+      scale_x_continuous(breaks=c(-120,-60,0,60,120),
+                         labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
+      # ylim(c(164000, 176000)) +
+      theme_minimal(base_size = 15) +
+      theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())
+    
+  }
+
+# CSF
+CSFnplt <- CSFn %>% 
+  group_by(running_var) %>% 
+  summarise(CSF_norm = mean(CSF_norm, na.rm = T), n =n()) %>% 
+  {ggplot(., aes(running_var, CSF_norm)) +
+      geom_point(data=subset(., running_var > -m4_CSFn_fuzzy$bandwidth & running_var < m4_CSFn_fuzzy$bandwidth), color = "darkblue") +
+      geom_point(data=subset(., running_var < -m4_CSFn_fuzzy$bandwidth | running_var  > m4_CSFn_fuzzy$bandwidth), color = "blue", alpha = .3) +
+      geom_vline(xintercept = 0,linetype="dashed") +
+      geom_smooth(data=subset(., running_var < 0), method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
+      geom_smooth(data=subset(., running_var > 0), method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
+      labs(y = "Cerebrospinal\nFluid Volume", x = "Date of Birth in Months") + #this is in ml's
+      scale_x_continuous(breaks=c(-120,-60,0,60,120),
+                         labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
+      # ylim(c(164000, 176000)) +
+      theme_minimal(base_size = 15) +
+      theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())
+    
+  }
+
+# TBV
+TBVnplt <- TBVn %>% 
+  group_by(running_var) %>% 
+  summarise(TBV_norm = mean(TBV_norm, na.rm = T), n =n()) %>% 
+  {ggplot(., aes(running_var, TBV_norm)) +
+      geom_point(data=subset(., running_var > -m5_TBVn_fuzzy$bandwidth & running_var < m5_TBVn_fuzzy$bandwidth), color = "darkblue") +
+      geom_point(data=subset(., running_var < -m5_TBVn_fuzzy$bandwidth | running_var  > m5_TBVn_fuzzy$bandwidth), color = "blue", alpha = .3) +
+      geom_vline(xintercept = 0,linetype="dashed") +
+      geom_smooth(data=subset(., running_var < 0), method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
+      geom_smooth(data=subset(., running_var > 0), method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
+      labs(y = 'Total Brain\nVolumne', x = "Date of Birth in Months") +
+      scale_x_continuous(breaks=c(-120,-60,0,60,120),
+                         labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
+      # ylim(c(164000, 176000)) +
+      theme_minimal(base_size = 20) +
+      theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())
+    
+  }
 
 
-RDHonest::RDScatter(SA~birth_quarters, data = fullimage, avg = Inf, propdotsize = T, vert = T)
-RDHonest::RDScatter(CT~birth_quarters, data = fullimage, avg = Inf, propdotsize = T, vert = T)
-RDHonest::RDScatter(WM_hyper~birth_quarters, data = fullimage, avg = Inf, propdotsize = T, vert = T)
-RDHonest::RDScatter(CSF_norm~birth_quarters, data = fullimage, avg = Inf, propdotsize = T, vert = T)
-RDHonest::RDScatter(TBV_norm~birth_quarters, data = fullimage, avg = Inf, propdotsize = T, vert = T)
+# wFA
+wFAplt <- wFAs %>% 
+  group_by(running_var) %>% 
+  summarise(wFA = mean(wFA, na.rm = T), n =n()) %>% 
+  {ggplot(., aes(running_var, wFA)) +
+      geom_point(data=subset(., running_var > -m6_wFA_fuzzy$bandwidth & running_var < m6_wFA_fuzzy$bandwidth), color = "darkblue") +
+      geom_point(data=subset(., running_var < -m6_wFA_fuzzy$bandwidth | running_var  > m6_wFA_fuzzy$bandwidth), color = "blue", alpha = .3) +
+      geom_vline(xintercept = 0,linetype="dashed") +
+      geom_smooth(data=subset(., running_var < 0), method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
+      geom_smooth(data=subset(., running_var > 0), method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
+      labs(y = bquote('Weighted\nFractional Anisotropy'), x = "Date of Birth in Months") +
+      scale_x_continuous(breaks=c(-120,-60,0,60,120),
+                         labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
+      scale_y_continuous(breaks=c(.440, .445, .450)) + #.442,.444, .446, .448
+      # ylim(c(164000, 176000)) +
+      theme_minimal(base_size = 20) +
+      theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())
+    
+  }
 
 
-RDHonest::RDScatter(EduAge~running_var, data = fullimage, avg = Inf, propdotsize = T, vert = T)
-RDHonest(EduAge ~ running_var, fullimage)
+SAplt + CSFnplt + CTplt + WMhplt + TBVnplt + wFAplt + 
+  plot_annotation(tag_levels = 'a')
 
-RDHonest::RDScatter(visit_day_correct~birth_quarters, data = fullimage, avg = Inf, propdotsize = T, vert = T)
+ggsave("~/Google Drive/My Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/Fig2.png")
 
-
-rdrobust::rdplot(fullimage$SA, fullimage$running_var, p = 3)
-rdrobust::rdplot(fullimage$CT, fullimage$running_var)
-rdrobust::rdplot(fullimage$TBV_norm, fullimage$running_var)
-rdrobust::rdplot(fullimage$WM_hyper, fullimage$running_var)
-rdrobust::rdplot(fullimage$CSF_norm, fullimage$running_var)
-
-rdrobust::rdplot(fullset$EduAge, fullset$running_var)
-rdrobust::rdplot(fullset$visit_day_correct, fullset$running_var)
+SAplt +  CTplt + TBVnplt + wFAplt + 
+  plot_annotation(tag_levels = 'a')
+# did base size 20
+ggsave("~/Google Drive/My Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/Fig2_4.png", width = 16, height = 9)
 
 
-ggplot(fullset, aes(x = year)) +
-  geom_histogram(bins = length(unique(fullset$year))) +
-  geom_vline(xintercept = 1947, color = "red") +
-  geom_vline(xintercept = 1967, color = "red")
+
 
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
