@@ -297,24 +297,113 @@ global_results <- rbind(m1_sa_fuzzy, m2_ct_fuzzy, m3_WMh_fuzzy, m4_CSFn_fuzzy, m
 
 #moving plotting below so I can put the MSE derived bounds
 
-RDHonest::RDScatter(SA~birth_quarters, data = fullset, avg = Inf, propdotsize = T, vert = T)
-RDHonest::RDScatter(CT~birth_quarters, data = fullset, avg = Inf, propdotsize = T, vert = T)
-RDHonest::RDScatter(WM_hyper~birth_quarters, data = fullset, avg = Inf, propdotsize = T, vert = T)
-RDHonest::RDScatter(CSF_norm~birth_quarters, data = fullset, avg = Inf, propdotsize = T, vert = T)
-RDHonest::RDScatter(TBV_norm~birth_quarters, data = fullset, avg = Inf, propdotsize = T, vert = T)
+fullimage <- fullset[!is.na(visit_date)]
 
 
-RDHonest::RDScatter(EduAge~running_var, data = fullset, avg = Inf, propdotsize = T, vert = T)
-RDHonest(EduAge ~ running_var, fullset)
+SAplt <- fullimage %>% 
+  group_by(running_var) %>% 
+  summarise(sa = mean(SA, na.rm = T), n =n()) %>% 
+  {ggplot(., aes(running_var, sa)) +
+      geom_point(data=subset(., running_var > -m1_sa_fuzzy$bandwidth & running_var < m1_sa_fuzzy$bandwidth), color = "darkblue") +
+      geom_point(data=subset(., running_var < -m1_sa_fuzzy$bandwidth | running_var  > m1_sa_fuzzy$bandwidth), color = "blue", alpha = .3) +
+      geom_vline(xintercept = 0,linetype="dashed") +
+      geom_smooth(data=subset(., running_var < 0), method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
+      geom_smooth(data=subset(., running_var > 0), method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
+      labs(y = bquote('Monthly Surface Area'~(mm^3)), x = "Date of Birth in Months") +
+      scale_x_continuous(breaks=c(-96,-48,0,48,96),
+                         labels=c("Sept.\n1949", "Sept.\n1953", "Sept.\n1957", "Sept.\n1961", "Sept.\n1965")) +
+      ylim(c(164000, 176000)) +
+      theme_minimal(base_size = 20) +
+      theme(axis.text.x= element_text(angle=45))
 
-RDHonest::RDScatter(visit_day_correct~birth_quarters, data = fullset, avg = Inf, propdotsize = T, vert = T)
+    }
+
+# getting plotting lines
+
+sa_coefs <- lm(SA ~ running_var*I(running_var>0), sa, subset = (running_var <= m1_sa_fuzzy$bandwidth & running_var >= -m1_sa_fuzzy$bandwidth))$coefficients
 
 
-rdrobust::rdplot(fullset$SA, fullset$running_var)
-rdrobust::rdplot(fullset$CT, fullset$running_var)
-rdrobust::rdplot(fullset$TBV_norm, fullset$running_var)
-rdrobust::rdplot(fullset$WM_hyper, fullset$running_var)
-rdrobust::rdplot(fullset$CSF_norm, fullset$running_var)
+
+# you need to think long & hard about the lines...
+
+ggplot(ct, aes(running_var, sa)) + 
+  geom_point() +
+  geom_vline(xintercept = 0,linetype="dotted") +
+  # geom_smooth(method = "lm", xseq = -m1_sa_fuzzy$bandwidth:0) +
+  # geom_smooth(method = "lm", xseq = 0:m1_sa_fuzzy$bandwidth)
+  geom_smooth(data=subset(ct, running_var >= -m1_sa_fuzzy$bandwidth & running_var < 0), method='lm',formula=y~x,se=F, color = "darkblue") +
+  geom_smooth(data=subset(ct, running_var <= m1_sa_fuzzy$bandwidth & running_var > 0), method='lm',formula=y~x,se=F, color = "darkblue") +
+  annotate("rect", xmin = -m1_sa_fuzzy$bandwidth, xmax = m1_sa_fuzzy$bandwidth, ymin = min(ct$sa) - sd(ct$sa)/2, ymax = max(ct$sa) + sd(ct$sa)/2,
+           alpha = .2)
+
+
+
+
+geom_point(data=subset(df, running_var > -100 & running_var < 100), alpha = .8, color = "darkblue") +
+  geom_point(data=subset(df, running_var < -100 | running_var > 100), alpha = .2, color = "blue")
+
+ggplot(ct, aes(running_var, sa)) + # , size = n
+  geom_point(data=subset(ct, running_var > -m1_sa_fuzzy$bandwidth & running_var < m1_sa_fuzzy$bandwidth), color = "darkblue") +
+  geom_point(data=subset(ct, running_var < -m1_sa_fuzzy$bandwidth | running_var  > m1_sa_fuzzy$bandwidth), color = "blue", alpha = .3) +
+  geom_vline(xintercept = 0,linetype="dashed") +
+  geom_smooth(data=subset(ct, running_var < 0), method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
+  geom_smooth(data=subset(ct, running_var > 0), method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
+  labs(y = bquote('Monthly Surface Area'~(mm^3)), x = "Date of Birth in Months") +
+  theme_minimal(base_size = 20) +
+  # annotate("rect", xmin = -m1_sa_fuzzy$bandwidth, xmax = m1_sa_fuzzy$bandwidth, ymin = min(ct$sa) - sd(ct$sa)/2, ymax = max(ct$sa) + sd(ct$sa)/2,
+  #          alpha = .2) + 
+  scale_x_continuous(breaks=c(-96,-48,0,48,96),
+                     labels=c("Sept.\n1949", "Sept.\n1953", "Sept.\n1957", "Sept.\n1961", "Sept.\n1965")) +
+  ylim(c(164000, 176000)) + 
+  theme(axis.text.x= element_text(angle=45))
+
+
+  # geom_segment(aes(x = -m1_sa_fuzzy$bandwidth, xend = 0, 
+  #                  y = sa_coefs[1], yend = sa_coefs[1] + sa_coefs[2]), color = "darkblue") +
+  # geom_segment(aes(x = 0, xend = m1_sa_fuzzy$bandwidth, 
+  #                  y = sa_coefs[1] + sa_coefs[3], yend = sa_coefs[1] + sa_coefs[3] +sa_coefs[2] + sa_coefs[4]), color = "darkblue") +
+
+ggplot(ct, aes(running_var, sa)) + 
+  geom_point() +
+  geom_vline(xintercept = 0,linetype="dotted") +
+  geom_smooth(method = "lm", color = "darkblue") +
+  annotate("rect", xmin = -m1_sa_fuzzy$bandwidth, xmax = m1_sa_fuzzy$bandwidth, ymin = min(ct$sa) - sd(ct$sa)/2, ymax = max(ct$sa) + sd(ct$sa)/2,
+           alpha = .2)
+
+  
+  # geom_function(fun=Vectorize(function(x) {
+  #   if(x > 0 | x < -m1_sa_fuzzy$bandwidth)
+  #     return(NA)
+  #   else
+  #     return(x)
+  # }), color='red') +
+  #   geom_function(fun=Vectorize(function(x) {
+  #   if(x > 5)
+  #     return(x+3)
+  #   else
+  #     return(NA)
+  # }), color='blue')
+  
+
+
+RDHonest::RDScatter(SA~birth_quarters, data = fullimage, avg = Inf, propdotsize = T, vert = T)
+RDHonest::RDScatter(CT~birth_quarters, data = fullimage, avg = Inf, propdotsize = T, vert = T)
+RDHonest::RDScatter(WM_hyper~birth_quarters, data = fullimage, avg = Inf, propdotsize = T, vert = T)
+RDHonest::RDScatter(CSF_norm~birth_quarters, data = fullimage, avg = Inf, propdotsize = T, vert = T)
+RDHonest::RDScatter(TBV_norm~birth_quarters, data = fullimage, avg = Inf, propdotsize = T, vert = T)
+
+
+RDHonest::RDScatter(EduAge~running_var, data = fullimage, avg = Inf, propdotsize = T, vert = T)
+RDHonest(EduAge ~ running_var, fullimage)
+
+RDHonest::RDScatter(visit_day_correct~birth_quarters, data = fullimage, avg = Inf, propdotsize = T, vert = T)
+
+
+rdrobust::rdplot(fullimage$SA, fullimage$running_var, p = 3)
+rdrobust::rdplot(fullimage$CT, fullimage$running_var)
+rdrobust::rdplot(fullimage$TBV_norm, fullimage$running_var)
+rdrobust::rdplot(fullimage$WM_hyper, fullimage$running_var)
+rdrobust::rdplot(fullimage$CSF_norm, fullimage$running_var)
 
 rdrobust::rdplot(fullset$EduAge, fullset$running_var)
 rdrobust::rdplot(fullset$visit_day_correct, fullset$running_var)
