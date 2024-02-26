@@ -208,42 +208,6 @@ summary(lm(ROSLA ~ visit_day_correct, data =sa))
 cor(sa$visit_day_correct, sa$running_var, use = "pairwise.complete.obs")
 
 
-
-
-### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-#### 1.3 plotting ####
-### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-
-#moving plotting below so I can put the MSE derived bounds
-
-RDHonest::RDScatter(SA~birth_quarters, data = fullset, avg = Inf, propdotsize = T, vert = T)
-RDHonest::RDScatter(CT~birth_quarters, data = fullset, avg = Inf, propdotsize = T, vert = T)
-RDHonest::RDScatter(WM_hyper~birth_quarters, data = fullset, avg = Inf, propdotsize = T, vert = T)
-RDHonest::RDScatter(CSF_norm~birth_quarters, data = fullset, avg = Inf, propdotsize = T, vert = T)
-RDHonest::RDScatter(TBV_norm~birth_quarters, data = fullset, avg = Inf, propdotsize = T, vert = T)
-
-
-RDHonest::RDScatter(EduAge~running_var, data = fullset, avg = Inf, propdotsize = T, vert = T)
-RDHonest(EduAge ~ running_var, fullset)
-
-RDHonest::RDScatter(visit_day_correct~birth_quarters, data = fullset, avg = Inf, propdotsize = T, vert = T)
-
-
-rdrobust::rdplot(fullset$SA, fullset$running_var)
-rdrobust::rdplot(fullset$CT, fullset$running_var)
-rdrobust::rdplot(fullset$TBV_norm, fullset$running_var)
-rdrobust::rdplot(fullset$WM_hyper, fullset$running_var)
-rdrobust::rdplot(fullset$CSF_norm, fullset$running_var)
-
-rdrobust::rdplot(fullset$EduAge, fullset$running_var)
-rdrobust::rdplot(fullset$visit_day_correct, fullset$running_var)
-
-
-ggplot(fullset, aes(x = year)) +
-  geom_histogram(bins = length(unique(fullset$year))) +
-  geom_vline(xintercept = 1947, color = "red") +
-  geom_vline(xintercept = 1967, color = "red")
-
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 #### 1.4 fuzzy RD for global vars   ####
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
@@ -325,6 +289,41 @@ global_results <- rbind(m1_sa_fuzzy, m2_ct_fuzzy, m3_WMh_fuzzy, m4_CSFn_fuzzy, m
 #   kbl(caption = "Global neuroimaging results") %>%
 #   kable_styling("hover", full_width = F) %>%
 #   save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/global_results.html")
+
+
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+#### 1.3 plotting ####
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+
+#moving plotting below so I can put the MSE derived bounds
+
+RDHonest::RDScatter(SA~birth_quarters, data = fullset, avg = Inf, propdotsize = T, vert = T)
+RDHonest::RDScatter(CT~birth_quarters, data = fullset, avg = Inf, propdotsize = T, vert = T)
+RDHonest::RDScatter(WM_hyper~birth_quarters, data = fullset, avg = Inf, propdotsize = T, vert = T)
+RDHonest::RDScatter(CSF_norm~birth_quarters, data = fullset, avg = Inf, propdotsize = T, vert = T)
+RDHonest::RDScatter(TBV_norm~birth_quarters, data = fullset, avg = Inf, propdotsize = T, vert = T)
+
+
+RDHonest::RDScatter(EduAge~running_var, data = fullset, avg = Inf, propdotsize = T, vert = T)
+RDHonest(EduAge ~ running_var, fullset)
+
+RDHonest::RDScatter(visit_day_correct~birth_quarters, data = fullset, avg = Inf, propdotsize = T, vert = T)
+
+
+rdrobust::rdplot(fullset$SA, fullset$running_var)
+rdrobust::rdplot(fullset$CT, fullset$running_var)
+rdrobust::rdplot(fullset$TBV_norm, fullset$running_var)
+rdrobust::rdplot(fullset$WM_hyper, fullset$running_var)
+rdrobust::rdplot(fullset$CSF_norm, fullset$running_var)
+
+rdrobust::rdplot(fullset$EduAge, fullset$running_var)
+rdrobust::rdplot(fullset$visit_day_correct, fullset$running_var)
+
+
+ggplot(fullset, aes(x = year)) +
+  geom_histogram(bins = length(unique(fullset$year))) +
+  geom_vline(xintercept = 1947, color = "red") +
+  geom_vline(xintercept = 1967, color = "red")
 
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
