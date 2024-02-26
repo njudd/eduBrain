@@ -214,6 +214,7 @@ cor(sa$visit_day_correct, sa$running_var, use = "pairwise.complete.obs")
 #### 1.3 plotting ####
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 
+#moving plotting below so I can put the MSE derived bounds
 
 RDHonest::RDScatter(SA~birth_quarters, data = fullset, avg = Inf, propdotsize = T, vert = T)
 RDHonest::RDScatter(CT~birth_quarters, data = fullset, avg = Inf, propdotsize = T, vert = T)
@@ -242,27 +243,6 @@ ggplot(fullset, aes(x = year)) +
   geom_histogram(bins = length(unique(fullset$year))) +
   geom_vline(xintercept = 1947, color = "red") +
   geom_vline(xintercept = 1967, color = "red")
-
-
-# okay now that you have excluded everyone you can make the imaging date cov
-# witte_vars_sa <- witte_vars_sa %>% 
-#   mutate(running_var = ym(str_c(year, "-", month))) %>% 
-#   mutate(birth_quarters = interval(ym("1957-9"),running_var) %/% months(3),
-#          running_var = interval(ym("1957-9"),running_var) %/% months(1),
-#          visit_day_correct = interval(ymd(min(witte_vars_sa$visit_date)), ymd(witte_vars_sa$visit_date)) %/% days(1),
-#          visit_day_correct2 = visit_day_correct^2) %>%
-#   mutate(EduAge = coalesce(EduAge_3image, EduAge_2, EduAge_1)) %>% # maybe take the max response
-#   select(-c(EduAge_3image, EduAge_2, EduAge_1)) %>% 
-#   select(-matches("6138")) #dropping the qualifications for now; 
-#   # BUT those with college don't have EduAge; so you need to readd them!!!*
-
-
-# checking my work
-# head(witte_vars_sa[witte_vars_sa$running_var==0,])
-# unique(witte_vars_sa[witte_vars_sa$running_var==0]$year)
-# unique(witte_vars_sa[witte_vars_sa$running_var==0]$month) # zero equals treatment, which works with RDHonest (yet not rdrobust)
-
-
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 #### 1.4 fuzzy RD for global vars   ####
