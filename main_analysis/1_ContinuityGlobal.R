@@ -183,29 +183,24 @@ fullset <- wFA[fullset, on ="eid"]
 ### saving the result
 # data.table::fwrite(fullset, "/Volumes/home/lifespan/nicjud/UKB/proc/20240223_fullset.csv")
 
-
-
-
-
-
 # issue of visit days vs Running var & DOB
 
-cor(fullset$visit_day_correct, fullset$running_var, use = "pairwise.complete.obs")
-cor(fullset$visit_day_correct, fullset$year, use = "pairwise.complete.obs")
-
-ggplot(fullset, aes(visit_day_correct, running_var)) +
-  geom_point(alpha = .1) +
-  geom_smooth()
-
-
-visit_day_correct ~ EduAge16 | running_var
-
-cor(sa$visit_day_correct, sa$running_var, use = "pairwise.complete.obs")
-
-sa$ROSLA <- sa$running_var >0 #this is the NatEx grouped
-
-summary(lm(ROSLA ~ visit_day_correct, data =sa))
-cor(sa$visit_day_correct, sa$running_var, use = "pairwise.complete.obs")
+# cor(fullset$visit_day_correct, fullset$running_var, use = "pairwise.complete.obs")
+# cor(fullset$visit_day_correct, fullset$year, use = "pairwise.complete.obs")
+# 
+# ggplot(fullset, aes(visit_day_correct, running_var)) +
+#   geom_point(alpha = .1) +
+#   geom_smooth()
+# 
+# 
+# visit_day_correct ~ EduAge16 | running_var
+# 
+# cor(sa$visit_day_correct, sa$running_var, use = "pairwise.complete.obs")
+# 
+# sa$ROSLA <- sa$running_var >0 #this is the NatEx grouped
+# 
+# summary(lm(ROSLA ~ visit_day_correct, data =sa))
+# cor(sa$visit_day_correct, sa$running_var, use = "pairwise.complete.obs")
 
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
@@ -288,7 +283,28 @@ global_results <- rbind(m1_sa_fuzzy, m2_ct_fuzzy, m3_WMh_fuzzy, m4_CSFn_fuzzy, m
 # global_results %>% #saving the results
 #   kbl(caption = "Global neuroimaging results") %>%
 #   kable_styling("hover", full_width = F) %>%
-#   save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/global_results.html")
+#   save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/global_results_Y.html")
+
+# making a table without covs
+
+# m1_sa_fuzzy_uY = RDjacked("SA", "running_var", fuzzy = 'EduAge16', df = sa) #352 t2_FLAIR
+# m2_ct_fuzzy_uY = RDjacked("CT", "running_var", fuzzy = 'EduAge16', df = ct) #same as above
+# m3_WMh_fuzzy_uY = RDjacked("WM_hyper", "running_var", fuzzy = 'EduAge16', df = WMh) # only 2 occassions
+# m4_CSFn_fuzzy_uY = RDjacked("CSF_norm", "running_var", fuzzy = 'EduAge16', df = CSFn) #352 t2_FLAIR
+# m5_TBVn_fuzzy_uY = RDjacked("TBV_norm", "running_var", fuzzy = 'EduAge16', df = TBVn) #352 t2_FLAIR
+# m6_wFA_fuzzy_uY = RDjacked("wFA", "running_var", fuzzy = 'EduAge16', df = wFAs) # only 37 occassions
+# 
+# global_results_uY <- rbind(m1_sa_fuzzy_uY, m2_ct_fuzzy_uY, m3_WMh_fuzzy_uY, m4_CSFn_fuzzy_uY, m5_TBVn_fuzzy_uY, m6_wFA_fuzzy_uY)
+# 
+# global_results_uY %>% #saving the results
+#   kbl(caption = "Global neuroimaging results uncorrected") %>%
+#   kable_styling("hover", full_width = F) %>%
+#   save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/global_results_uY.html")
+
+
+
+
+
 
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
@@ -299,6 +315,27 @@ global_results <- rbind(m1_sa_fuzzy, m2_ct_fuzzy, m3_WMh_fuzzy, m4_CSFn_fuzzy, m
 
 # RDHonest::RDScatter(SA~birth_quarters, data = fullimage, avg = Inf, propdotsize = T, vert = T)
 # rdrobust::rdplot(fullimage$SA, fullimage$running_var, p = 3)
+
+
+Edu16plt <- fullset[!is.na(fullset$visit_date),] %>% #making sure it is imaging subjects
+  group_by(running_var) %>% 
+  summarise(piEdu16 = sum(EduAge16, na.rm = T)/n()) %>% 
+  {ggplot(., aes(running_var, piEdu16)) +
+      geom_point(color = "blue", alpha = .3) +
+      # geom_point(data=subset(., running_var > -m1_sa_fuzzy$bandwidth & running_var < m1_sa_fuzzy$bandwidth), color = "darkblue") +
+      # geom_point(data=subset(., running_var < -m1_sa_fuzzy$bandwidth | running_var  > m1_sa_fuzzy$bandwidth), color = "blue", alpha = .3) +
+      geom_vline(xintercept = 0,linetype="dashed") +
+      geom_smooth(data=subset(., running_var < 0), method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
+      geom_smooth(data=subset(., running_var > 0), method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
+      labs(y = bquote('Percent staying until 16'), x = "Date of Birth in Months") + # bquote('Total Surface Area'~(mm^3))
+      scale_x_continuous(breaks=c(-120,-60,0,60,120),
+                         labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
+      ylim(c(.75, 1)) +
+      theme_minimal(base_size = 20) +
+      theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())
+  }
+# ggsave("~/Google Drive/My Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/SI_Fig1.png", Edu16plt, width = 10, height = 8, bg = "white")
+
 
 # surface area
 SAplt <- sa %>% 
@@ -420,14 +457,17 @@ wFAplt <- wFAs %>%
 SAplt + CSFnplt + CTplt + WMhplt + TBVnplt + wFAplt + 
   plot_annotation(tag_levels = 'a')
 
-ggsave("~/Google Drive/My Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/Fig2.png")
+# ggsave("~/Google Drive/My Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/Fig2.png")
 
 SAplt +  CTplt + TBVnplt + wFAplt + 
   plot_annotation(tag_levels = 'a')
 # did base size 20
-ggsave("~/Google Drive/My Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/Fig2_4.png", width = 16, height = 9)
+# ggsave("~/Google Drive/My Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/Fig2_4.png", width = 16, height = 9)
 
+CSFnplt / WMhplt + 
+  plot_annotation(tag_levels = 'a')
 
+ggsave("~/Google Drive/My Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/SIfig2.png", width = 10, height = 8)
 
 
 
@@ -451,22 +491,28 @@ dens_test <- rddensity(X = fullset$running_var_SHIFT[!is.na(fullset$visit_date)]
 # testing the covariates
 simple_fuzzy <- function(f, dt){
   p0 <- RDHonest(f, data = dt)
-  p1 <- RDHonest(f, data = dt, T0 = p1.0$coefficients$estimate) #as seen in the vinjette; giving a starting val
+  p1 <- RDHonest(f, data = dt, T0 = p0$coefficients$estimate) #as seen in the vinjette; giving a starting val
   out <- p1$coefficients[c("term", "bandwidth", "eff.obs", "estimate", "conf.low", "conf.high", "p.value")]
   out[2:6] <- round(out[2:6], 2) #rounding; not the p because I will FDR
   out$term = f # adding the forumula to the output
   return(out)
 }
 
-covs %>% 
+# dummy coding cols means you miss one center on the test
+fullset$imaging_center_11025 <- fullset$imaging_center == 11025
+covsT <- c(covs, "imaging_center_11025")
+
+covsT %>%
   str_c(., " ~ EduAge16 | running_var") %>% #making a forumula from the covs
   map_dfr(~simple_fuzzy(., dt = fullset[!is.na(fullset$visit_date),])) %>% #RDHonest automatically listwise deletes
   mutate(pFDR = round(p.adjust(p.value, method = 'fdr'), 3),
-         p.value = round(p.value, 3)) %>% 
+         p.value = round(p.value, 3)) %>%
   kbl(caption = "Placebo Outcomes from the covs of no interest") %>%
   kable_styling("hover", full_width = F) %>%
-  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/placebo_outcomes.html")
-  
+  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/SI_Table1_placebo_outcomes2.html")
+
+
+
 # looking closer into summer, need to be donut holed removing running var 7,8,9,10 of 1957
 summer0 <- RDHonest(summer ~ EduAge16 | running_var, data = fullset[!is.na(fullset$visit_date),])
 summer1 <- RDHonest(summer ~ EduAge16 | running_var, data = fullset[!is.na(fullset$visit_date),], T0 = summer0$coefficients$estimate)
