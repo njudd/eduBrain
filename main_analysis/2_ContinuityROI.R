@@ -17,6 +17,8 @@
 # check *'s
 
 
+# https://stackoverflow.com/questions/10323817/r-unexpected-results-from-p-adjust-fdr
+
 ### ***FLAIR is removed due to to little obs
 
 
@@ -131,10 +133,10 @@ sum(sa_results$pfdr < .05) # anything sig?
 
 # x12 save results into html table
 
-sa_results %>% 
-  kbl(caption = "Surface Area ROI results") %>%
-  kable_styling("hover", full_width = F) %>% 
-  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/RDcont/sa_results.html")
+# sa_results %>% 
+#   kbl(caption = "Surface Area ROI results") %>%
+#   kable_styling("hover", full_width = F) %>% 
+#   save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/RDcont/sa_results.html")
 
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
@@ -180,11 +182,13 @@ ct_results <- ct_codes$ggSeg %>%
 
 sum(ct_results$pfdr < .05)
 
+
+
 # x12 save results into html table
-ct_results %>% 
-  kbl(caption = "Cortical thickness ROI results") %>%
-  kable_styling("hover", full_width = F) %>% 
-  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/RDcont/ct_results.html")
+# ct_results %>% 
+#   kbl(caption = "Cortical thickness ROI results") %>%
+#   kable_styling("hover", full_width = F) %>% 
+#   save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/RDcont/ct_results.html")
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 #### 2.4 weighted FA regional fuzzy RD ####
@@ -235,10 +239,10 @@ wFA_results <- wFA_codes$ggSeg %>%
 sum(wFA_results$pfdr < .05) # anything sig?
 
 # x12 save results into html table
-wFA_results %>% 
-  kbl(caption = "weighted FA ROI results") %>%
-  kable_styling("hover", full_width = F) %>% 
-  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/RDcont/wfa_results.html")
+# wFA_results %>% 
+#   kbl(caption = "weighted FA ROI results") %>%
+#   kable_styling("hover", full_width = F) %>% 
+#   save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/RDcont/wfa_results.html")
 
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
@@ -288,8 +292,58 @@ sROI_results<- sub_codes$ggSeg %>%
 sum(sROI_results$pfdr < .05) # anything sig?
 
 # x12 save results into html table
-sROI_results %>% 
-  kbl(caption = "Subcortical Vol results") %>%
-  kable_styling("hover", full_width = F) %>% 
-  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/RDcont/sub_results.html")
+# sROI_results %>% 
+#   kbl(caption = "Subcortical Vol results") %>%
+#   kable_styling("hover", full_width = F) %>% 
+#   save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/RDcont/sub_results.html")
+
+
+
+# plot of number of observations
+
+sa_results$modality <- rep("SA", dim(sa_results)[1])
+ct_results$modality <- rep("CT", dim(ct_results)[1])
+wFA_results$modality <- rep("wFA", dim(wFA_results)[1])
+sROI_results$modality <- rep("Subcortical", dim(sROI_results)[1])
+
+largedf <- rbind(sa_results, ct_results, wFA_results, sROI_results)
+
+ggplot(largedf, aes(modality, eff.obs, fill = modality)) +
+  ggrain::geom_rain() +
+  theme_minimal()
+
+ggplot(largedf, aes(modality, Y, fill = modality)) +
+  ggrain::geom_rain() +
+  theme_minimal()
+
+
+SI_3.1 <- ggplot(largedf, aes(modality, eff.obs, fill = modality)) +
+  ggrain::geom_rain() +
+  labs(y = "Effective n", x = "") +
+  theme_minimal(base_size = 25) +
+  theme(legend.position = "none") +
+  scale_fill_brewer(palette = 'Dark2')
+# ggsave("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/SI_3.1_regionN.png", bg = "white", width = 10, height = 6)
+# 
+# 
+SI_3.2 <- ggplot(largedf, aes(modality, p.value, fill = modality)) +
+  ggrain::geom_rain() +
+  labs(y = "p value (uncorrected)", x = "") +
+  theme_minimal(base_size = 25) +
+  theme(legend.position = "none") +
+  scale_fill_brewer(palette = 'Dark2')
+
+SI_3 <- SI_3.1 / SI_3.2 + plot_annotation(tag_levels = 'a')
+
+# ggsave("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/SI_3.png", SI_3, bg = "white", width = 14, height = 14)
+
+
+
+
+
+
+
+
+
+
 
