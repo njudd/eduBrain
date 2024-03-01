@@ -14,7 +14,6 @@
 
 
 #### notes
-
 # map & map2 are used a lot for parallelization; they are pretty much for loops with lists
 # map2 takes two lists (of equal lenght & itterates thru them in order)
 # https://data-se.netlify.app/2021/02/06/plotting-multiple-plots-using-purrr-map-and-ggplot/
@@ -99,7 +98,12 @@ modB1 <- future_map2(DVs, IVs, \(y, x) bayesFIT(y, x, b1_covs, b1),
 
 # first testing the covariates again in the 1mnth window...
 # "we will analyze predetermined covariates and placebo outcomes similarly to the local-linear approach"
-b1CovTest <- b1_covs %>%
+
+# missing one of the centers for the covariate test, since it is dummy coded
+b1$imaging_center_11025 <- b1$imaging_center == 11025
+b1_covsT <- c(b1_covs, "imaging_center_11025")
+
+b1CovTest <- b1_covsT %>%
   future_map(~bayesFIT(., "ROSLA", covs = c(), b1), .options = furrr_options(seed = T)) %>% 
   future_map_dfr(~bayes_to_results(list(.))) %>%
   kbl(caption = "1 Month Bandwidth Covariates Bayesian Test") %>%
@@ -139,11 +143,54 @@ map2(modB1, plt_name_draw,
 # https://mc-stan.org/bayesplot/articles/visual-mcmc-diagnostics.html
 # ^^^ go thru this!! 
 
-
-
-b1SA <- stan_glm(paste0(c("SA ~ ROSLA", b1_covs), collapse=" + "), data = b1, iter = 40000)
 # do ploy on scan date & see if anything changes as this orthogonlizes it!
 # VERY HIGH VIFs
+
+
+
+#### trying a plot to show evidence
+
+
+# B1_results <- modB1 %>% future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) 
+B6_results <- modB6 %>% future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) 
+# 
+# 
+# BF_results <- rbind(B1_results, B6_results)
+# BF_results <- BF_results[BF_results$X == "ROSLA",]
+# 
+# BF_results$binsize <- as.character(BF_results$binsize)
+# 
+# 
+# ggplot(BF_results, aes(Y, logBF, fill = binsize)) +
+#   geom_point() +
+#   ylim(-5, 5)
+
+
+# you just want to show assosiational vs causal BFs
+
+ggplot(B6_results, aes(Y, logBF, shape = X))  +
+  geom_point() +
+  ylim(-5, 5) +
+  theme_classic() +
+  annotate("rect", xmin = .5, xmax = 6.5, ymin = 4.6, ymax = 5, alpha = .8, fill = heatmaply::RdBu(10)[1]) + # extreme evidence
+  annotate("rect", xmin = .5, xmax = 6.5, ymin = 3.4, ymax = 4.6, alpha = .8, fill = heatmaply::RdBu(10)[2]) + # very strong
+  annotate("rect", xmin = .5, xmax = 6.5, ymin = 2.3, ymax = 3.4, alpha = .8, fill = heatmaply::RdBu(10)[3]) + # strong
+  annotate("rect", xmin = .5, xmax = 6.5, ymin = 1.1, ymax = 2.3, alpha = .8, fill = heatmaply::RdBu(10)[4]) + # substantial
+  annotate("rect", xmin = .5, xmax = 6.5, ymin = 1, ymax = 1.1, alpha = .8, fill = heatmaply::RdBu(10)[5]) + # anecdotal
+  annotate("rect", xmin = .5, xmax = 6.5, ymin = -1, ymax = 1, alpha = .8, fill = "white") + # no evidence either way
+  annotate("rect", xmin = .5, xmax = 6.5, ymin = -1, ymax = -1.1, alpha = .8, fill = heatmaply::RdBu(10)[6]) +
+  annotate("rect", xmin = .5, xmax = 6.5, ymin = -1.1, ymax = -2.3, alpha = .8, fill = heatmaply::RdBu(10)[7]) +
+  annotate("rect", xmin = .5, xmax = 6.5, ymin = -2.3, ymax = -3.4, alpha = .8, fill = heatmaply::RdBu(10)[8]) +
+  annotate("rect", xmin = .5, xmax = 6.5, ymin = -3.4, ymax = -4.6, alpha = .8, fill = heatmaply::RdBu(10)[9]) +
+  annotate("rect", xmin = .5, xmax = 6.5, ymin = -4.6, ymax = -5, alpha = .8, fill = heatmaply::RdBu(10)[10]) +
+  geom_point() +
+  coord_flip() +
+  scale_shape_manual(values = c(2,1)) # http://www.sthda.com/english/wiki/ggplot2-point-shapes
+
+
+
+
+
 
 # plotting the posterior of the IV's with rainclouds...
 
@@ -181,7 +228,7 @@ ggplot(sa_post, aes(1, posterior, fill = iv, color = iv)) +
 #### 3.4 6 month window analysis ####
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 
-b6 <- fullset[running_var %in% c(-6:5)][
+b6 <- fullset[running_var %in% c(-5:4)][
   , ROSLA := running_var >= 0
 ][
   !is.na(visit_date) #must be an imaging subjects (visit date instance 2)
@@ -202,10 +249,10 @@ modB6 <- future_map2(DVs, IVs, \(y, x) bayesFIT(y, x, b6_covs, b6),
                      .options = furrr_options(seed = T))
 
 modB6 %>% 
-  future_map_dfr(~bayes_to_results(list(.))) %>%
-  kbl(caption = "Six Month Bandwidth Bayesian Analysis") %>%
+  future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) %>%
+  kbl(caption = "Five Month Bandwidth Bayesian Analysis") %>%
   kable_styling("hover", full_width = F) %>%
-  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/localRand/6mBayes.html")
+  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/localRand/5mBayes.html")
 
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
@@ -215,14 +262,56 @@ modB6 %>%
 # first testing the covariates again in the 6mnth window...
 # "we will analyze predetermined covariates and placebo outcomes similarly to the local-linear approach"
 
-b6_covs %>%
+b6$imaging_center_11025 <- b6$imaging_center == 11025
+b6_covsT <- c(b6_covs, "imaging_center_11025")
+
+b6_covsT %>%
   future_map(~bayesFIT(., "ROSLA", covs = c(), b6), .options = furrr_options(seed = T)) %>% 
   future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) %>%
-  kbl(caption = "6 Month Bandwidth Covariates Bayesian Test") %>%
+  kbl(caption = "5 Month Bandwidth Covariates Bayesian Test") %>%
   kable_styling("hover", full_width = F) %>%
-  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/localRand/6mBayes_cov.html")
+  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/localRand/5mBayes_cov.html")
 
 # again no point in moving the window up or down a year since there are no sig results to disprove/test
+
+
+
+# plotting posterior Total Surface area & CSF_norm for 5 month Local Rand
+
+# grab posterior ROSLA total SA; # grab posterior EduYear SA;
+
+# sa6_posterior <- data.frame(posterior = c(get_parameters(modB6[[1]])[,2], get_parameters(modB6[[2]])[,2]),
+#                             effect = c(rep("Causal", 160000), rep("Observational", 160000)))
+# 
+# ggplot(sa6_posterior, aes(1, posterior, group = effect)) +
+#   ggrain::geom_rain()
+
+#  grab posterior ROSLA CSF_norm; # grab posterior EduYear CSF_norm
+
+# csf6_posterior <- data.frame(posterior = c(get_parameters(modB6[[5]])[,2], get_parameters(modB6[[6]])[,2]),
+#                             effect = c(rep("Causal", 160000), rep("Observational", 160000)))
+# 
+# ggplot(csf6_posterior, aes(posterior, group = effect)) +
+#   geom_density()
+
+
+
+
+
+
+c(get_parameters(modB6[[5]])[,2], get_parameters(modB6[[6]])[,2])
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
