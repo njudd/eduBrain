@@ -326,6 +326,7 @@ Edu16plt <- fullset[!is.na(fullset$visit_date),] %>% #making sure it is imaging 
       # geom_point(data=subset(., running_var < -m1_sa_fuzzy$bandwidth | running_var  > m1_sa_fuzzy$bandwidth), color = "blue", alpha = .3) +
       geom_vline(xintercept = 0,linetype="dashed") +
       geom_smooth(data=subset(., running_var < 0), method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
+      geom_smooth(data=subset(., running_var < 0), method='glm',formula=y~poly(x,2),se=F, color = "darkgreen") +
       geom_smooth(data=subset(., running_var > 0), method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
       labs(y = bquote('Percent staying until 16'), x = "Date of Birth in Months") + # bquote('Total Surface Area'~(mm^3))
       scale_x_continuous(breaks=c(-120,-60,0,60,120),
