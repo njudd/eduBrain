@@ -51,7 +51,7 @@ witte_vars <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/raw/N.Judd_20
 witte_UK_headmotion <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/raw/N.Judd_2024_02_23.csv") # he said he doesn't have 196 & 24419
 
 
-# rm(list = ls()[ls() != "witte_vars"])
+rm(list = ls()[ls() != "witte_vars"])
 fullset <- data.table::copy(witte_vars)
 # unfortuenly you need to run 2_ContinuityROI.R to get the mean wFA variable
 wFA <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/proc/20240222_wFAGLOBAL.csv")[, .(eid, wFA)]
@@ -280,10 +280,10 @@ m6_wFA_fuzzy = RDjacked("wFA", "running_var", fuzzy = 'EduAge16', df = wFAs, cov
 
 global_results <- rbind(m1_sa_fuzzy, m2_ct_fuzzy, m3_WMh_fuzzy, m4_CSFn_fuzzy, m5_TBVn_fuzzy, m6_wFA_fuzzy)
 
-# global_results %>% #saving the results
-#   kbl(caption = "Global neuroimaging results") %>%
-#   kable_styling("hover", full_width = F) %>%
-#   save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/global_results_Y.html")
+global_results %>% #saving the results
+  kbl(caption = "Global neuroimaging results") %>%
+  kable_styling("hover", full_width = F) %>%
+  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/global_results.html")
 
 # making a table without covs
 
