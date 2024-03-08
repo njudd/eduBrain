@@ -85,13 +85,13 @@ RDjacked <- function(y, running, fuzzy, df, covs = NULL, report_efficiancy = FAL
       
       # Step 2 
       f2 <- paste(c(paste0(y, "~", running, "*I(", running, ">=0)"), covs), collapse=" + ")
-      r2 <- lm(f1, data = df2)
+      r2 <- lm(f2, data = df2)
       df$y_adj <- drop(df[,y]-as.matrix(df[, covs]) %*% r2$coefficients[covs])
       
       # he estimates new M's, lets do the same! https://github.com/kolesarm/RDHonest/issues/7
       
-      rd2 <- RDHonest(paste0("y_adj ~ fuzzy_adj | ", running), data = df, 
-                      T0 = rdpre$coefficients$estimate)
+      rd2 <- RDHonest(paste0("y_adj ~ fuzzy_adj |", running), data = df, 
+                      T0 = rdpre$coefficients$estimate, M = c(rd1$coefficients$M.rf, rd1$coefficients$M.fs))
       
       if (report_efficiancy == TRUE) {
         ##### now I am just making a nice output & showing the difference from cov correction
