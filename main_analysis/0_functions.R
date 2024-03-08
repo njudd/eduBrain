@@ -74,52 +74,52 @@ RDjacked <- function(y, running, fuzzy, df, covs = NULL, report_efficiancy = FAL
     if(dim(df)[1] == sum(complete.cases(df))){
       print("No missing data; proceeding with Adjustment")
       
-      # Step 1
-      f1 <- paste(c(paste0(y, "~", running, "*I(", running, ">=0)"), covs), collapse=" + ")
-      # print(f1)
+      # only on the earlier bandwidth
       sSet <- eval(parse(text = paste0(rlang::expr(df), "$", running))) <= rd1$coefficients$bandwidth & eval(parse(text = paste0(rlang::expr(df), "$", running))) >= -rd1$coefficients$bandwidth
-      
       df2 = df[sSet,]
       
+      # Step 1 Fuzzy
+      f1 <- paste(c(paste0(fuzzy, "~", running, "*I(", running, ">=0)"), covs), collapse=" + ")
       r1 <- lm(f1, data = df2) 
-      # r1 <- lm(f1, data = data, subset = sSet)
-      # OMFG what a nightmare; gonna just subset a new df... this doesn't work in very interesting ways.
-
-      ### now this is tricky as you need to assign it
+      df$fuzzy_adj <- drop(df[,fuzzy]-as.matrix(df[, covs]) %*% r1$coefficients[covs])
       
-      df$y_adj <- drop(df[,y]-as.matrix(df[, covs]) %*% r1$coefficients[covs])
+      # Step 2 
+      f2 <- paste(c(paste0(y, "~", running, "*I(", running, ">=0)"), covs), collapse=" + ")
+      r2 <- lm(f1, data = df2)
+      df$y_adj <- drop(df[,y]-as.matrix(df[, covs]) %*% r2$coefficients[covs])
       
-      rd2 <- RDHonest(paste0("y_adj ~", fuzzy, "|", running), data = df, 
-                      T0 = rdpre$coefficients$estimate, # as in the vinjette for fuzzy RD's
-                      M = c(rd1$coefficients$M.rf, rd1$coefficients$M.fs))
+      # he estimates new M's, lets do the same! https://github.com/kolesarm/RDHonest/issues/7
+      
+      rd2 <- RDHonest(paste0("y_adj ~ fuzzy_adj | ", running), data = df, 
+                      T0 = rdpre$coefficients$estimate)
       
       if (report_efficiancy == TRUE) {
         ##### now I am just making a nice output & showing the difference from cov correction
-        rd2 <- rd2$coefficients[c('term', 'estimate', 'conf.low', 'conf.high', 'bandwidth', 'eff.obs', 'p.value')]
-        names(rd2)[2] <- "Y"
-        
-        Y_un <- rd1$coefficients$estimate # estimate uncorrected
-        
-        dY <- abs(rd2$Y - Y_un)
-        dY_pi <- Y_un/abs(rd2$Y)*100
-        
-        dCI_un <- abs(rd1$coefficients$conf.low - rd1$coefficients$conf.high)
-        
-        dCI <- abs(rd2$conf.low - rd2$conf.high) - dCI_un
-        dCI_pi <- dCI/abs(rd2$conf.low - rd2$conf.high)*100
-        
-        rd2 <- cbind(rd2, Y_un, dY, dY_pi, dCI, dCI_pi)
-        # Y uncorrected, abs change of the Y's, perfect change of Y's, raw CI change, percent CI change
-        
-        rd2$CI <- paste0("(", as.character(round(rd2$conf.low, 2)), ", ", as.character(round(rd2$conf.high, 2)), ")")
-        
-        rd2 <- rd2[c("term", "eff.obs", "bandwidth", "Y", "Y_un", "dY", "dY_pi","p.value", "CI", "dCI", "dCI_pi")]
-        
-        rd2[c("eff.obs", "bandwidth", "Y", "Y_un", "dY", "dY_pi", "dCI", "dCI_pi")] <- round(rd2[c("eff.obs", "bandwidth", "Y", "Y_un", "dY", "dY_pi", "dCI", "dCI_pi")], 3)
-        
-        rd2$term <- paste(y)
-        
-        return(rd2)
+        # rd2 <- rd2$coefficients[c('term', 'estimate', 'conf.low', 'conf.high', 'bandwidth', 'eff.obs', 'p.value')]
+        # names(rd2)[2] <- "Y"
+        # 
+        # Y_un <- rd1$coefficients$estimate # estimate uncorrected
+        # 
+        # dY <- abs(rd2$Y - Y_un)
+        # dY_pi <- Y_un/abs(rd2$Y)*100
+        # 
+        # dCI_un <- abs(rd1$coefficients$conf.low - rd1$coefficients$conf.high)
+        # 
+        # dCI <- abs(rd2$conf.low - rd2$conf.high) - dCI_un
+        # dCI_pi <- dCI/abs(rd2$conf.low - rd2$conf.high)*100
+        # 
+        # rd2 <- cbind(rd2, Y_un, dY, dY_pi, dCI, dCI_pi)
+        # # Y uncorrected, abs change of the Y's, perfect change of Y's, raw CI change, percent CI change
+        # 
+        # rd2$CI <- paste0("(", as.character(round(rd2$conf.low, 2)), ", ", as.character(round(rd2$conf.high, 2)), ")")
+        # 
+        # rd2 <- rd2[c("term", "eff.obs", "bandwidth", "Y", "Y_un", "dY", "dY_pi","p.value", "CI", "dCI", "dCI_pi")]
+        # 
+        # rd2[c("eff.obs", "bandwidth", "Y", "Y_un", "dY", "dY_pi", "dCI", "dCI_pi")] <- round(rd2[c("eff.obs", "bandwidth", "Y", "Y_un", "dY", "dY_pi", "dCI", "dCI_pi")], 3)
+        # 
+        # rd2$term <- paste(y)
+        # 
+        # return(rd2)
       } else {
         
         # above compares corrected vs uncorrected, here we just get the corrected results
