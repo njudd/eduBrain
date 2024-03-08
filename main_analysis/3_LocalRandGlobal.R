@@ -147,83 +147,6 @@ map2(modB1, plt_name_draw,
 # VERY HIGH VIFs
 
 
-
-#### trying a plot to show evidence
-
-
-# B1_results <- modB1 %>% future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) 
-B6_results <- modB6 %>% future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) 
-# 
-# 
-# BF_results <- rbind(B1_results, B6_results)
-# BF_results <- BF_results[BF_results$X == "ROSLA",]
-# 
-# BF_results$binsize <- as.character(BF_results$binsize)
-# 
-# 
-# ggplot(BF_results, aes(Y, logBF, fill = binsize)) +
-#   geom_point() +
-#   ylim(-5, 5)
-
-
-# you just want to show assosiational vs causal BFs
-
-ggplot(B6_results, aes(Y, logBF, shape = X))  +
-  geom_point() +
-  ylim(-5, 5) +
-  theme_classic() +
-  annotate("rect", xmin = .5, xmax = 6.5, ymin = 4.6, ymax = 5, alpha = .8, fill = heatmaply::RdBu(10)[1]) + # extreme evidence
-  annotate("rect", xmin = .5, xmax = 6.5, ymin = 3.4, ymax = 4.6, alpha = .8, fill = heatmaply::RdBu(10)[2]) + # very strong
-  annotate("rect", xmin = .5, xmax = 6.5, ymin = 2.3, ymax = 3.4, alpha = .8, fill = heatmaply::RdBu(10)[3]) + # strong
-  annotate("rect", xmin = .5, xmax = 6.5, ymin = 1.1, ymax = 2.3, alpha = .8, fill = heatmaply::RdBu(10)[4]) + # substantial
-  annotate("rect", xmin = .5, xmax = 6.5, ymin = 1, ymax = 1.1, alpha = .8, fill = heatmaply::RdBu(10)[5]) + # anecdotal
-  annotate("rect", xmin = .5, xmax = 6.5, ymin = -1, ymax = 1, alpha = .8, fill = "white") + # no evidence either way
-  annotate("rect", xmin = .5, xmax = 6.5, ymin = -1, ymax = -1.1, alpha = .8, fill = heatmaply::RdBu(10)[6]) +
-  annotate("rect", xmin = .5, xmax = 6.5, ymin = -1.1, ymax = -2.3, alpha = .8, fill = heatmaply::RdBu(10)[7]) +
-  annotate("rect", xmin = .5, xmax = 6.5, ymin = -2.3, ymax = -3.4, alpha = .8, fill = heatmaply::RdBu(10)[8]) +
-  annotate("rect", xmin = .5, xmax = 6.5, ymin = -3.4, ymax = -4.6, alpha = .8, fill = heatmaply::RdBu(10)[9]) +
-  annotate("rect", xmin = .5, xmax = 6.5, ymin = -4.6, ymax = -5, alpha = .8, fill = heatmaply::RdBu(10)[10]) +
-  geom_point() +
-  coord_flip() +
-  scale_shape_manual(values = c(2,1)) # http://www.sthda.com/english/wiki/ggplot2-point-shapes
-
-
-
-
-
-
-# plotting the posterior of the IV's with rainclouds...
-
-
-# you need to raincloud EduYears vs ROSLA...
-
-#### just manually extract them...
-
-sa_post <- data.frame(iv = c(rep(names(get_parameters(modB1[[1]]))[2], dim(get_parameters(modB1[[1]])[2])[1]), rep(names(get_parameters(modB1[[2]]))[2], dim(get_parameters(modB1[[2]])[2])[1])),
-                      posterior = c(get_parameters(modB1[[1]])[,2], get_parameters(modB1[[2]])[,2]))
-
-ggplot(sa_post, aes(1, posterior, fill = iv, color = iv)) + 
-  ggrain::geom_rain(alpha = .05, rain.side = 'l', boxplot.args.pos = list(
-    position = ggpp::position_dodgenudge(x = .1, width = 0.1), width = 0.1)) +
-  theme_classic() +
-  scale_fill_brewer(palette = 'Dark2') +
-  scale_color_brewer(palette = 'Dark2')
-
-
-# old code that isn't great
-# plt_path = "~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/"
-# modB1 %>% 
-#   map(~data.frame(iv_posterior = get_parameters(.)[,2], 
-#                   dv_name = rep(as.character(.$formula[2]), dim(get_parameters(.)[2])[1]),
-#                   iv_name = rep(names(get_parameters(.))[2], dim(get_parameters(.)[2])[1]))) %>% 
-#   map(~{ggplot(., aes(1, iv_posterior)) + 
-#       ggrain::geom_rain(point.args = list(alpha = .05)) + 
-#       theme_classic(base_size = 20) +
-#       labs(y = str_c("Effect of ", unique(.$iv_name), " on ", unique(.$dv_name)))}) %>% 
-#   map(~ggsave(str_c(plt_path, str_replace_all(.$labels$y, " ", "_"), ".png"), ., bg = "white"))
-  
-
-
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 #### 3.4 6 month window analysis ####
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
@@ -295,17 +218,69 @@ b6_covsT %>%
 #   geom_density()
 
 
+#### trying a plot to show evidence
+
+
+# B1_results <- modB1 %>% future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) 
+B6_results <- modB6 %>% future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T))
+
+# you just want to show assosiational vs causal BFs
+
+ggplot(B6_results, aes(Y, logBF, shape = X))  +
+  geom_point(size = 8) +
+  ylim(-5, 5) +
+  theme_classic(base_size = 15) +
+  annotate("rect", xmin = .5, xmax = 6.5, ymin = 4.6, ymax = 5, alpha = .8, fill = heatmaply::RdBu(10)[1]) + # extreme evidence
+  annotate("rect", xmin = .5, xmax = 6.5, ymin = 3.4, ymax = 4.6, alpha = .8, fill = heatmaply::RdBu(10)[2]) + # very strong
+  annotate("rect", xmin = .5, xmax = 6.5, ymin = 2.3, ymax = 3.4, alpha = .8, fill = heatmaply::RdBu(10)[3]) + # strong
+  annotate("rect", xmin = .5, xmax = 6.5, ymin = 1.1, ymax = 2.3, alpha = .8, fill = heatmaply::RdBu(10)[4]) + # substantial
+  annotate("rect", xmin = .5, xmax = 6.5, ymin = 1, ymax = 1.1, alpha = .8, fill = heatmaply::RdBu(10)[5]) + # anecdotal
+  annotate("rect", xmin = .5, xmax = 6.5, ymin = -1, ymax = 1, alpha = .8, fill = "white") + # no evidence either way
+  annotate("rect", xmin = .5, xmax = 6.5, ymin = -1, ymax = -1.1, alpha = .8, fill = heatmaply::RdBu(10)[6]) +
+  annotate("rect", xmin = .5, xmax = 6.5, ymin = -1.1, ymax = -2.3, alpha = .8, fill = heatmaply::RdBu(10)[7]) +
+  annotate("rect", xmin = .5, xmax = 6.5, ymin = -2.3, ymax = -3.4, alpha = .8, fill = heatmaply::RdBu(10)[8]) +
+  annotate("rect", xmin = .5, xmax = 6.5, ymin = -3.4, ymax = -4.6, alpha = .8, fill = heatmaply::RdBu(10)[9]) +
+  annotate("rect", xmin = .5, xmax = 6.5, ymin = -4.6, ymax = -5, alpha = .8, fill = heatmaply::RdBu(10)[10]) +
+  geom_point() +
+  labs(x = "", y = "log Bayes Factors", shape = "Parameter") +
+  scale_shape_manual(values = c(2,1)) + # http://www.sthda.com/english/wiki/ggplot2-point-shapes
+  coord_flip() #+
+  # theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
 
 
 
 
-c(get_parameters(modB6[[5]])[,2], get_parameters(modB6[[6]])[,2])
 
 
+# plotting the posterior of the IV's with rainclouds...
 
 
+# you need to raincloud EduYears vs ROSLA...
+
+#### just manually extract them...
+
+sa_post <- data.frame(iv = c(rep(names(get_parameters(modB1[[1]]))[2], dim(get_parameters(modB1[[1]])[2])[1]), rep(names(get_parameters(modB1[[2]]))[2], dim(get_parameters(modB1[[2]])[2])[1])),
+                      posterior = c(get_parameters(modB1[[1]])[,2], get_parameters(modB1[[2]])[,2]))
+
+ggplot(sa_post, aes(1, posterior, fill = iv, color = iv)) + 
+  ggrain::geom_rain(alpha = .05, rain.side = 'l', boxplot.args.pos = list(
+    position = ggpp::position_dodgenudge(x = .1, width = 0.1), width = 0.1)) +
+  theme_classic() +
+  scale_fill_brewer(palette = 'Dark2') +
+  scale_color_brewer(palette = 'Dark2')
 
 
+# old code that isn't great
+# plt_path = "~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/"
+# modB1 %>% 
+#   map(~data.frame(iv_posterior = get_parameters(.)[,2], 
+#                   dv_name = rep(as.character(.$formula[2]), dim(get_parameters(.)[2])[1]),
+#                   iv_name = rep(names(get_parameters(.))[2], dim(get_parameters(.)[2])[1]))) %>% 
+#   map(~{ggplot(., aes(1, iv_posterior)) + 
+#       ggrain::geom_rain(point.args = list(alpha = .05)) + 
+#       theme_classic(base_size = 20) +
+#       labs(y = str_c("Effect of ", unique(.$iv_name), " on ", unique(.$dv_name)))}) %>% 
+#   map(~ggsave(str_c(plt_path, str_replace_all(.$labels$y, " ", "_"), ".png"), ., bg = "white"))
 
 
 
