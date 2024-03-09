@@ -208,6 +208,30 @@ RDjacked <- function(y, running, fuzzy, df, covs = NULL, report_efficiancy = FAL
     }
 }
 
+
+# MICE function
+
+MICE_imp <- function(df, n = 5) {
+  
+  ini <- mice(df, maxit=0, print=F)
+  pred <- ini$pred
+  pred[ ,"EduAge16"] <- 0
+  pred[ ,"running_var"] <- 0
+  
+  # didn't work
+  # meth <- ini$method
+  # meth['visit_day_correct2'] <- "quadratic"
+  # meth['imaging_center_11026'] <- "cart"
+  # meth['imaging_center_11027'] <- "cart"
+  # meth['imaging_center_11028'] <- "cart"
+  
+  imp <- mice(df, pred=pred, print=F, m = n, method = "cart")
+  # https://stackoverflow.com/questions/48355250/do-imputation-in-r-when-mice-returns-error-that-system-is-computationally-singu
+  return(imp)
+}
+
+
+
 # function to fit a simple Bayes model
 # function to fit a simple mod with covs 
 # bayesFIT("SA", "ROSLA", b1_covs, b1)
