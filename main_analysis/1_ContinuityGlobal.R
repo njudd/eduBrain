@@ -51,7 +51,7 @@ witte_vars <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/raw/N.Judd_20
 witte_UK_headmotion <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/raw/N.Judd_2024_02_23.csv") # he said he doesn't have 196 & 24419
 
 
-rm(list = ls()[ls() != "witte_vars"])
+# rm(list = ls()[ls() != "witte_vars"])
 fullset <- data.table::copy(witte_vars)
 # unfortuenly you need to run 2_ContinuityROI.R to get the mean wFA variable
 wFA <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/proc/20240222_wFAGLOBAL.csv")[, .(eid, wFA)]
@@ -249,17 +249,38 @@ TBVn <- TBVn[complete.cases(TBVn[, .(TBV_norm, running_var, EduAge16)]),][
 wFAs <- wFAs[complete.cases(wFAs[, .(wFA, running_var, EduAge16)]),][ 
   ,c("wFA", covs_fence) := lapply(.SD, vec_to_fence), .SDcols=c("wFA", covs_fence)]
 
-# *** check that the fencing works as expected (on the Y & covs_fence)
-# *** how does it deal with NA's?
+
+
+
+
+
+######### you should also state the amount of missing.
+
+# sa_imp <- MICE_imp(sa, n = 10)
+# ct_imp <- MICE_imp(ct, n = 10)
+# CSFn_imp <- MICE_imp(CSFn, n = 10)
+# TBVn_imp <- MICE_imp(TBVn, n = 10)
+# wFAs_imp <- MICE_imp(wFAs, n = 10)
+# 
+# sa_imp_r <- with(sa_imp, RDjacked("SA", "running_var", fuzzy = 'EduAge16', df = data.frame(mget(ls())), covs = covs))
+# ct_imp_r <- with(ct_imp, RDjacked("CT", "running_var", fuzzy = 'EduAge16', df = data.frame(mget(ls())), covs = covs))
+# CSFn_imp_r <- with(CSFn_imp, RDjacked("CSF_norm", "running_var", fuzzy = 'EduAge16', df = data.frame(mget(ls())), covs = covs))
+# TBVn_imp_r <- with(TBVn_imp, RDjacked("TBV_norm", "running_var", fuzzy = 'EduAge16', df = data.frame(mget(ls())), covs = covs))
+# wFAs_imp_r <- with(wFAs_imp, RDjacked("wFA", "running_var", fuzzy = 'EduAge16', df = data.frame(mget(ls())), covs = covs))
+# 
+# # covs[covs != "t2_FLAIR"]
+# WMh_imp <- MICE_imp(WMh[,!"t2_FLAIR"], n = 10)
+# WMh_imp_r <- with(WMh_imp, RDjacked("WM_hyper", "running_var", fuzzy = 'EduAge16', df = data.frame(mget(ls())), covs = covs[covs != "t2_FLAIR"]))
 
 # checking missingness in covs
 # are they complete?
-dim(sa)[1] == sum(complete.cases(sa))
-dim(ct)[1] == sum(complete.cases(ct))
-dim(WMh)[1] == sum(complete.cases(WMh))
-dim(CSFn)[1] == sum(complete.cases(CSFn))
-dim(TBVn)[1] == sum(complete.cases(TBVn))
-
+1-sum(complete.cases(sa))/dim(sa)[1]
+1-sum(complete.cases(ct))/dim(ct)[1]
+1-sum(complete.cases(WMh))/dim(WMh)[1]
+1-sum(complete.cases(CSFn))/dim(CSFn)[1]
+1-sum(complete.cases(TBVn))/dim(TBVn)[1]
+1-sum(complete.cases(wFAs))/dim(wFAs)[1]
+# 0.04126855
 
 # missing dMRI covs
 sa = sa[complete.cases(sa),] #34010 to 32102
