@@ -479,17 +479,17 @@ wFAplt <- wFAs %>%
 SAplt + CSFnplt + CTplt + WMhplt + TBVnplt + wFAplt + 
   plot_annotation(tag_levels = 'a')
 
-# ggsave("~/Google Drive/My Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/Fig2.png")
+# ggsave("~/Google Drive/My Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/Fig1.png")
 
 SAplt +  CTplt + TBVnplt + wFAplt + 
   plot_annotation(tag_levels = 'a')
 # did base size 20
-# ggsave("~/Google Drive/My Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/Fig2_4.png", width = 16, height = 9)
+# ggsave("~/Google Drive/My Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/Fig1_4.png", width = 16, height = 9)
 
 CSFnplt / WMhplt + 
   plot_annotation(tag_levels = 'a')
 
-ggsave("~/Google Drive/My Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/SIfig2.png", width = 10, height = 8)
+# ggsave("~/Google Drive/My Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/SIfig2.png", width = 10, height = 8)
 
 
 
