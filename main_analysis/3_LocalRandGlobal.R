@@ -103,12 +103,12 @@ modB1 <- future_map2(DVs, IVs, \(y, x) bayesFIT(y, x, b1_covs, b1),
 b1$imaging_center_11025 <- b1$imaging_center == 11025
 b1_covsT <- c(b1_covs, "imaging_center_11025")
 
-b1CovTest <- b1_covsT %>%
-  future_map(~bayesFIT(., "ROSLA", covs = c(), b1), .options = furrr_options(seed = T)) %>% 
-  future_map_dfr(~bayes_to_results(list(.))) %>%
-  kbl(caption = "1 Month Bandwidth Covariates Bayesian Test") %>%
-  kable_styling("hover", full_width = F) %>%
-  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/localRand/1mBayes_cov.html")
+# b1CovTest <- b1_covsT %>%
+#   future_map(~bayesFIT(., "ROSLA", covs = c(), b1), .options = furrr_options(seed = T)) %>% 
+#   future_map_dfr(~bayes_to_results(list(.))) %>%
+#   kbl(caption = "1 Month Bandwidth Covariates Bayesian Test") %>%
+#   kable_styling("hover", full_width = F) %>%
+#   save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/localRand/1mBayes_cov.html")
 
 # by moving the cutoff up a year (Sept. 1958), up two years (Sept. 1959), down a year (Sept. 1956), and down two years (Sept. 1955). 
 # This doesn't make much sense if you don't have an effect... so we will not do it
@@ -117,19 +117,19 @@ b1CovTest <- b1_covsT %>%
 plt_name_trace <- str_c("Trace plot BayesLocal (1 mnth) of", IVs," on ", DVs)
 plt_name_trace_s <- str_c("trace_", IVs, "_", DVs)
 
-map2(modB1, plt_name_trace, 
-     \(x, y) {mcmc_trace(x) + labs(title = y)}) %>% 
-  map2(., plt_name_trace_s, 
-       \(q, w) ggsave(paste0("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/diags/", w, ".png"), q, bg = "white"))
+# map2(modB1, plt_name_trace, 
+#      \(x, y) {mcmc_trace(x) + labs(title = y)}) %>% 
+#   map2(., plt_name_trace_s, 
+#        \(q, w) ggsave(paste0("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/diags/", w, ".png"), q, bg = "white"))
 
 # plotting and saving posterior draws
 plt_name_draw <- str_c("Posterior draws BayesLocal (1 mnth) of", IVs," on ", DVs)
 plt_name_draw_s <- str_c("draw_", IVs, "_", DVs)
 
-map2(modB1, plt_name_draw, 
-     \(x, y) {color_scheme_set("pink"); ppc_dens_overlay(y = x$y, yrep = posterior_predict(x, draws = 200)) + labs(title = y)}) %>% 
-  map2(., plt_name_draw_s, 
-       \(q, w) ggsave(paste0("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/diags/", w, ".png"), q, bg = "white"))
+# map2(modB1, plt_name_draw, 
+#      \(x, y) {color_scheme_set("pink"); ppc_dens_overlay(y = x$y, yrep = posterior_predict(x, draws = 200)) + labs(title = y)}) %>% 
+#   map2(., plt_name_draw_s, 
+#        \(q, w) ggsave(paste0("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/diags/", w, ".png"), q, bg = "white"))
 
 
 ############
@@ -171,11 +171,11 @@ plan(multisession, workers = 6) # THIS WORKS
 modB6 <- future_map2(DVs, IVs, \(y, x) bayesFIT(y, x, b6_covs, b6),
                      .options = furrr_options(seed = T))
 
-modB6 %>% 
-  future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) %>%
-  kbl(caption = "Five Month Bandwidth Bayesian Analysis") %>%
-  kable_styling("hover", full_width = F) %>%
-  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/localRand/5mBayes.html")
+# modB6 %>% 
+#   future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) %>%
+#   kbl(caption = "Five Month Bandwidth Bayesian Analysis") %>%
+#   kable_styling("hover", full_width = F) %>%
+#   save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/localRand/5mBayes.html")
 
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
@@ -188,12 +188,12 @@ modB6 %>%
 b6$imaging_center_11025 <- b6$imaging_center == 11025
 b6_covsT <- c(b6_covs, "imaging_center_11025")
 
-b6_covsT %>%
-  future_map(~bayesFIT(., "ROSLA", covs = c(), b6), .options = furrr_options(seed = T)) %>% 
-  future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) %>%
-  kbl(caption = "5 Month Bandwidth Covariates Bayesian Test") %>%
-  kable_styling("hover", full_width = F) %>%
-  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/localRand/5mBayes_cov.html")
+# b6_covsT %>%
+#   future_map(~bayesFIT(., "ROSLA", covs = c(), b6), .options = furrr_options(seed = T)) %>% 
+#   future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) %>%
+#   kbl(caption = "5 Month Bandwidth Covariates Bayesian Test") %>%
+#   kable_styling("hover", full_width = F) %>%
+#   save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/localRand/5mBayes_cov.html")
 
 # again no point in moving the window up or down a year since there are no sig results to disprove/test
 
@@ -226,10 +226,38 @@ B6_results <- modB6 %>% future_map_dfr(~bayes_to_results(list(.)), .options = fu
 
 # you just want to show assosiational vs causal BFs
 
-ggplot(B6_results, aes(Y, logBF, shape = X))  +
-  geom_point(size = 8) +
+
+# things to make figure better
+# fill in the small triangles; not possible becasue it is a different scale
+# get rid of axis for label
+# rename and order labels corectly
+# rename legend to causal & correlational
+# change the log Bayes axis
+
+# draw arrows of the effect changing 
+hold <- B6_results
+
+# rename legend to causal & correlational
+B6_results$X[B6_results$X == "ROSLA"] <- "Causal"
+B6_results$X[B6_results$X == "EduAge"] <- "Correlational"
+
+# rename and order labels corectly
+B6_results$Y[B6_results$Y == "CSF_norm"] <- "CSF"
+B6_results$Y[B6_results$Y == "TBV_norm"] <- "TBV"
+B6_results$Y[B6_results$Y == "WM_hyper"] <- "WMh"
+
+B6_results$Y <- factor(B6_results$Y, levels = c("CSF", "SA", "wFA", "TBV", "WMh", "CT"))
+
+
+
+
+# think about an ROI plot on the brain. than also do a dot plot connected moving?
+
+
+plt2 <- ggplot(B6_results, aes(Y, logBF, shape = X))  +
+  geom_point(size = 4, color = "NA") +
   ylim(-5, 5) +
-  theme_classic(base_size = 15) +
+  theme_classic(base_size = 20) +
   annotate("rect", xmin = .5, xmax = 6.5, ymin = 4.6, ymax = 5, alpha = .8, fill = heatmaply::RdBu(10)[1]) + # extreme evidence
   annotate("rect", xmin = .5, xmax = 6.5, ymin = 3.4, ymax = 4.6, alpha = .8, fill = heatmaply::RdBu(10)[2]) + # very strong
   annotate("rect", xmin = .5, xmax = 6.5, ymin = 2.3, ymax = 3.4, alpha = .8, fill = heatmaply::RdBu(10)[3]) + # strong
@@ -241,12 +269,23 @@ ggplot(B6_results, aes(Y, logBF, shape = X))  +
   annotate("rect", xmin = .5, xmax = 6.5, ymin = -2.3, ymax = -3.4, alpha = .8, fill = heatmaply::RdBu(10)[8]) +
   annotate("rect", xmin = .5, xmax = 6.5, ymin = -3.4, ymax = -4.6, alpha = .8, fill = heatmaply::RdBu(10)[9]) +
   annotate("rect", xmin = .5, xmax = 6.5, ymin = -4.6, ymax = -5, alpha = .8, fill = heatmaply::RdBu(10)[10]) +
-  geom_point() +
-  labs(x = "", y = "log Bayes Factors", shape = "Parameter") +
-  scale_shape_manual(values = c(2,1)) + # http://www.sthda.com/english/wiki/ggplot2-point-shapes
-  coord_flip() #+
-  # theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+  labs(x = "", y = "Bayes Factors (log)", shape = "Parameter") +
+  geom_point(size = 4) + # a hack to put them on top
+  scale_y_continuous(breaks=c(-4.6, -3.4, -2.3,-1, 0, 1, 2.3,3.4,4.6)) +
+  scale_shape_manual(values = c(16,17)) + # http://www.sthda.com/english/wiki/ggplot2-point-shapes
+  theme(axis.line=element_blank(), axis.ticks.y = element_blank(),
+        axis.text.y = element_text(color = "black"),
+        legend.text = element_text(size=12),
+        legend.title = element_blank(),
+        legend.position = c(.955, .853),
+        legend.justification = c("right", "bottom"),
+        legend.box.just = "right",
+        legend.margin = margin(-7,6, 1, 1),
+        legend.background = element_rect(colour = 'black', fill = 'white', linetype='solid', linewidth = .3)) +
+  coord_flip() 
 
+ggsave("~/Google Drive/My Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/Fig2.png", plt2, width = 7, height = 5, bg = "white")
+  
 
 
 
