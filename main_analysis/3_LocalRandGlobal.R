@@ -33,7 +33,7 @@ if (!require(pacman)){
 
 pacman::p_load(tidyverse, lubridate, stringr, RDHonest, fastDummies, mice, ggseg, anytime, kableExtra,
                rstanarm, insight, bayestestR, furrr, bayesplot)
-
+plan(multisession, workers = 4) 
 # grab functions
 source("~/projects/roslaUKB/main_analysis/0_functions.R") 
 # function: vec_to_fence() takes a vector and puts outliers to the fence (i.e., boxplot.stats)
@@ -82,7 +82,7 @@ first_stage_bf$log_BF[2]
 DVs <- rep(c("SA", "CT", "CSF_norm", "TBV_norm", "WM_hyper", "wFA"), each = 2) #amazing 
 IVs <- rep(c("ROSLA", "EduAge"), 6)
 
-plan(multisession, workers = 6) # Look at the start of the script for a map2 explanation
+# plan(multisession, workers = 4) # Look at the start of the script for a map2 explanation
 modB1 <- future_map2(DVs, IVs, \(y, x) bayesFIT(y, x, b1_covs, b1),
                    .options = furrr_options(seed = T))
 
@@ -90,6 +90,20 @@ modB1 <- future_map2(DVs, IVs, \(y, x) bayesFIT(y, x, b1_covs, b1),
 #   kbl(caption = "One Month Bandwidth Bayesian Analysis") %>%
 #   kable_styling("hover", full_width = F) %>%
 #   save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/localRand/1mBayes.html")
+
+
+# doublechecking results playspace
+# ct <- bayes_to_results(modB1)
+# bayesfactor_parameters(as.matrix(modB1[[1]])[,2], prior = distribution_normal(160000, 0, 73532.32))
+# m1bf <- bayesfactor_parameters(modB1[[1]], parameters = "ROSLATRUE")
+# plot(m1bf)
+# summary(modB1[[1]])
+# bayesfactor_parameters(modB6[[1]])
+# m6bf <- bayesfactor_parameters(modB6[[1]], parameters = "ROSLATRUE")
+# m1bf$log
+# prior_summary(modB1[[1]])
+
+
 
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
@@ -100,8 +114,8 @@ modB1 <- future_map2(DVs, IVs, \(y, x) bayesFIT(y, x, b1_covs, b1),
 # "we will analyze predetermined covariates and placebo outcomes similarly to the local-linear approach"
 
 # missing one of the centers for the covariate test, since it is dummy coded
-b1$imaging_center_11025 <- b1$imaging_center == 11025
-b1_covsT <- c(b1_covs, "imaging_center_11025")
+# b1$imaging_center_11025 <- b1$imaging_center == 11025
+# b1_covsT <- c(b1_covs, "imaging_center_11025")
 
 # b1CovTest <- b1_covsT %>%
 #   future_map(~bayesFIT(., "ROSLA", covs = c(), b1), .options = furrr_options(seed = T)) %>% 
@@ -157,19 +171,20 @@ b6 <- fullset[running_var %in% c(-5:4)][
   !is.na(visit_date) #must be an imaging subjects (visit date instance 2)
 ]
 
-first_stage6 <- stan_glm("EduAge16 ~ running_var", data = b6, iter = 40000)
-hdi(first_stage6)
-first_stage_bf6 <- bayesfactor_parameters(first_stage6, null = 0)
-first_stage_bf6$log_BF[2]
+# first_stage6 <- stan_glm("EduAge16 ~ running_var", data = b6, iter = 40000)
+# this first stage should be the dummy coding (to be similar to first stage 1mnth)
+# hdi(first_stage6)
+# first_stage_bf6 <- bayesfactor_parameters(first_stage6, null = 0)
+# first_stage_bf6$log_BF[2]
 
 # taking as many covs as possible from the cont. approach
 covs[!covs %in% b1_covs]
 # table(b6$imaging_center_11028) # this is doable...
 b6_covs <- c(b1_covs, "imaging_center_11028")
 
-plan(multisession, workers = 6) # THIS WORKS
-modB6 <- future_map2(DVs, IVs, \(y, x) bayesFIT(y, x, b6_covs, b6),
-                     .options = furrr_options(seed = T))
+# plan(multisession, workers = 6) # THIS WORKS
+# modB6 <- future_map2(DVs, IVs, \(y, x) bayesFIT(y, x, b6_covs, b6),
+#                      .options = furrr_options(seed = T))
 
 # modB6 %>% 
 #   future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) %>%
@@ -185,8 +200,8 @@ modB6 <- future_map2(DVs, IVs, \(y, x) bayesFIT(y, x, b6_covs, b6),
 # first testing the covariates again in the 6mnth window...
 # "we will analyze predetermined covariates and placebo outcomes similarly to the local-linear approach"
 
-b6$imaging_center_11025 <- b6$imaging_center == 11025
-b6_covsT <- c(b6_covs, "imaging_center_11025")
+# b6$imaging_center_11025 <- b6$imaging_center == 11025
+# b6_covsT <- c(b6_covs, "imaging_center_11025")
 
 # b6_covsT %>%
 #   future_map(~bayesFIT(., "ROSLA", covs = c(), b6), .options = furrr_options(seed = T)) %>% 
@@ -219,7 +234,6 @@ b6_covsT <- c(b6_covs, "imaging_center_11025")
 
 
 #### trying a plot to show evidence
-
 
 # B1_results <- modB1 %>% future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) 
 B6_results <- modB6 %>% future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T))
@@ -330,31 +344,32 @@ ggplot(sa_post, aes(1, posterior, fill = iv, color = iv)) +
 
 
 
+
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-#### 3.5 Misc ####
+#### 3.5 Figure 3 NOT PreReged whole brain Bayes ####
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 
+# not taking any inference from this it is just meant to help visualize the null result
 
-### fooling around to see when the age differnces between the groups start having an effect
-# essentially the age difference between the groups have an effect because of the running variable
+b6; b6_covs
 
-bMAX <- fullset[running_var %in% c(-65:64)][
-  , ROSLA := running_var >= 0
+saROI <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/proc/20240222_SAroi.csv")[
+  eid %in% b6$eid
+][
+  b6[, .(eid, headmotion, ROSLA)], on = "eid" # was missing from SA_roi
 ]
-bMaxSA <- stan_glm(CT ~ ROSLA, data = bMAX, iter = 40000)
-bMaxSA_bf <- bayesfactor_parameters(bMaxSA, null = 0)
-bMaxSA_bf$log_BF[2]
 
 
+f3_DVs <- colnames(saROI)[as.logical(str_detect(colnames(saROI), "lh_") + str_detect(colnames(saROI), "rh_"))]
+f3_IVs <- rep("ROSLA", length(f3_DVs))
 
+f3_SAroi <- future_map2(f3_DVs, f3_IVs, \(y, x) bayesFIT(y, x, b6_covs, saROI),
+                     .options = furrr_options(seed = T))
 
+bayes_to_results(f3_SAroi[[1]])
 
-
-
-
-
-
-
+f3_SAroiBFs <- f3_SAroi %>% 
+  future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T))
 
 
 
