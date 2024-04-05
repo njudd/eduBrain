@@ -32,7 +32,7 @@ if (!require(pacman)){
 }
 
 pacman::p_load(tidyverse, lubridate, stringr, RDHonest, fastDummies, mice, ggseg, anytime, kableExtra,
-               rstanarm, insight, bayestestR, furrr, bayesplot)
+               rstanarm, insight, bayestestR, furrr, bayesplot, ggseg)
 plan(multisession, workers = 4) 
 # grab functions
 source("~/projects/roslaUKB/main_analysis/0_functions.R") 
@@ -359,28 +359,91 @@ saROI <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/proc/20240222_SAro
   b6[, .(eid, headmotion, ROSLA)], on = "eid" # was missing from SA_roi
 ]
 
+f3_SA_DVs <- colnames(saROI)[as.logical(str_detect(colnames(saROI), "lh_") + str_detect(colnames(saROI), "rh_"))]
+f3_SA_IVs <- rep("ROSLA", length(f3_SA_DVs))
 
-f3_DVs <- colnames(saROI)[as.logical(str_detect(colnames(saROI), "lh_") + str_detect(colnames(saROI), "rh_"))]
-f3_IVs <- rep("ROSLA", length(f3_DVs))
-
-f3_SAroi <- future_map2(f3_DVs, f3_IVs, \(y, x) bayesFIT(y, x, b6_covs, saROI),
+f3_SAroi <- future_map2(f3_SA_DVs, f3_SA_IVs, \(y, x) bayesFIT(y, x, b6_covs, saROI),
                      .options = furrr_options(seed = T))
 
-bayes_to_results(f3_SAroi[[1]])
+# was crashing my comp with future_map_dfr & ~bayes_to_results
+roi_vec <- c(); bf_vec <- c();rhat_vec <- c() # empty vectors for loop
+for(m in 1:length(f3_SAroi)){
+  roi_vec <- c(roi_vec, as.character(f3_SAroi[[m]]$formula[2]))
+  bf_vec <- c(bf_vec, round(bayesfactor_parameters(f3_SAroi[[m]], null = 0)$log_BF[2], 2))
+  rhat_vec <- c(rhat_vec, as.numeric(rhat(f3_SAroi[[m]])[2]))
+} # there should be a way to paralize without running out of memory...
 
-f3_SAroiBFs <- f3_SAroi %>% 
-  future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T))
+f3_SA_BFs <- tibble(
+  label = roi_vec,
+  bf = bf_vec)
+# this took FOREVER!!!
+data.table::fwrite(f3_SA_BFs, "/Volumes/home/lifespan/nicjud/UKB/proc/20240405_SAroiBFs.csv")
+
+# now for the brain plt'n
+f3_SA_BFs %>%
+  ggplot() +
+  geom_brain(atlas = dk, 
+             position = position_brain(hemi ~ side),
+             aes(fill = bf))
+
+# now for CT
+rm(list = c("saROI", "f3_SAroi"))
+
+ctROI <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/proc/20240222_CTroi.csv")[
+  eid %in% b6$eid
+][
+  b6[, .(eid, headmotion, ROSLA)], on = "eid" # was missing from SA_roi
+]
+
+f3_CT_DVs <- colnames(ctROI)[as.logical(str_detect(colnames(ctROI), "lh_") + str_detect(colnames(ctROI), "rh_"))]
+f3_CT_IVs <- rep("ROSLA", length(f3_CT_DVs))
+
+f3_CTroi <- future_map2(f3_CT_DVs, f3_CT_IVs, \(y, x) bayesFIT(y, x, b6_covs, ctROI),
+                        .options = furrr_options(seed = T))
+
+# was crashing my comp with future_map_dfr & ~bayes_to_results
+roi_vec <- c(); bf_vec <- c(); rhat_vec <- c() # empty vectors for loop
+for(m in 1:length(f3_CTroi)){
+  roi_vec <- c(roi_vec, as.character(f3_CTroi[[m]]$formula[2]))
+  bf_vec <- c(bf_vec, round(bayesfactor_parameters(f3_CTroi[[m]], null = 0)$log_BF[2], 2))
+  rhat_vec <- c(rhat_vec, as.numeric(rhat(f3_CTroi[[m]])[2]))
+} # there should be a way to paralize without running out of memory...
+
+f3_CT_BFs <- tibble(
+  label = roi_vec,
+  bf = bf_vec)
+# this took FOREVER!!!
+data.table::fwrite(f3_CT_BFs, "/Volumes/home/lifespan/nicjud/UKB/proc/20240405_CTroiBFs.csv")
 
 
+# now for FA
+rm(list = c("ctROI", "f3_CTroi"))
 
+faROI <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/proc/20240222_wFAGLOBAL.csv")[
+  eid %in% b6$eid
+][
+  b6[, .(eid, headmotion, ROSLA)], on = "eid" # was missing from SA_roi
+]
 
+f3_FA_DVs <- colnames(faROI)[34:60]
+f3_FA_IVs <- rep("ROSLA", length(f3_FA_DVs))
 
+f3_FAroi <- future_map2(f3_FA_DVs, f3_FA_IVs, \(y, x) bayesFIT(y, x, b6_covs, faROI),
+                        .options = furrr_options(seed = T))
 
+# was crashing my comp with future_map_dfr & ~bayes_to_results
+roi_vec <- c(); bf_vec <- c(); rhat_vec <- c() # empty vectors for loop
+for(m in 1:length(f3_FAroi)){
+  roi_vec <- c(roi_vec, as.character(f3_FAroi[[m]]$formula[2]))
+  bf_vec <- c(bf_vec, round(bayesfactor_parameters(f3_FAroi[[m]], null = 0)$log_BF[2], 2))
+  rhat_vec <- c(rhat_vec, as.numeric(rhat(f3_FAroi[[m]])[2]))
+} # there should be a way to paralize without running out of memory...
 
-
-
-
-
+f3_FA_BFs <- tibble(
+  label = roi_vec,
+  bf = bf_vec)
+# this took FOREVER!!!
+data.table::fwrite(f3_FA_BFs, "/Volumes/home/lifespan/nicjud/UKB/proc/20240405_FAroiBFs.csv")
 
 
 
