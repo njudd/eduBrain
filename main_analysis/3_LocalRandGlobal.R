@@ -415,6 +415,13 @@ f3_CT_BFs <- tibble(
 # this took FOREVER!!!
 data.table::fwrite(f3_CT_BFs, "/Volumes/home/lifespan/nicjud/UKB/proc/20240405_CTroiBFs.csv")
 
+# now for the brain plt'n
+f3_CT_BFs %>%
+  ggplot() +
+  geom_brain(atlas = dk, 
+             position = position_brain(hemi ~ side),
+             aes(fill = bf))
+
 
 # now for FA
 rm(list = c("ctROI", "f3_CTroi"))
@@ -446,6 +453,68 @@ f3_FA_BFs <- tibble(
 data.table::fwrite(f3_FA_BFs, "/Volumes/home/lifespan/nicjud/UKB/proc/20240405_FAroiBFs.csv")
 
 
+
+
+
+
+
+
+# now for subcortical
+rm(list = c("faROI", "f3_FAroi"))
+
+sROI <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/proc/20240222_sROI.csv")[
+  eid %in% b6$eid
+][
+  b6[, .(eid, headmotion, ROSLA)], on = "eid" # was missing from SA_roi
+]
+
+f3_sub_DVs <- colnames(sROI)[as.logical(str_detect(colnames(sROI), "lh_") + str_detect(colnames(sROI), "rh_"))]
+f3_sub_IVs <- rep("ROSLA", length(f3_sub_DVs))
+
+f3_SUBroi <- future_map2(f3_sub_DVs, f3_sub_IVs, \(y, x) bayesFIT(y, x, b6_covs, sROI),
+                        .options = furrr_options(seed = T))
+
+# was crashing my comp with future_map_dfr & ~bayes_to_results
+roi_vec <- c(); bf_vec <- c(); rhat_vec <- c() # empty vectors for loop
+for(m in 1:length(f3_SUBroi)){
+  roi_vec <- c(roi_vec, as.character(f3_SUBroi[[m]]$formula[2]))
+  bf_vec <- c(bf_vec, round(bayesfactor_parameters(f3_SUBroi[[m]], null = 0)$log_BF[2], 2))
+  rhat_vec <- c(rhat_vec, as.numeric(rhat(f3_SUBroi[[m]])[2]))
+} # there should be a way to paralize without running out of memory...
+
+f3_SUB_BFs <- tibble(
+  label = roi_vec,
+  bf = bf_vec)
+# this took FOREVER!!!
+data.table::fwrite(f3_SUB_BFs, "/Volumes/home/lifespan/nicjud/UKB/proc/20240405_SUBroiBFs.csv")
+
+# making a df of the atlas to edit
+aseg_edit <- aseg$data
+# subsetting relevant regions
+aseg_edit <- aseg_edit[aseg_edit$hemi %in% c("left", "right"),]
+aseg_edit <- aseg_edit[!is.na(aseg_edit$label),]
+
+# trying to make a col similar to f3_SUB_BFs to merge by
+aseg_edit$hemi[aseg_edit$hemi == "left"] <- rep("lh_", length(aseg_edit$hemi[aseg_edit$hemi == "left"]))
+aseg_edit$hemi[aseg_edit$hemi == "right"] <- rep("rh_", length(aseg_edit$hemi[aseg_edit$hemi == "right"]))
+
+
+
+tolower(f3_SUB_BFs$label)
+
+# need to make it friendly to join with aseg
+f3_SUB_BFs$hemi <- rep(NA, length(f3_SUB_BFs$label))
+f3_SUB_BFs$hemi[str_detect(f3_SUB_BFs$label, "lh")] <- rep("left", sum(str_detect(f3_SUB_BFs$label, "lh")))
+f3_SUB_BFs$hemi[str_detect(f3_SUB_BFs$label, "rh")] <- rep("right", sum(str_detect(f3_SUB_BFs$label, "rh")))
+
+
+
+
+f3_SUB_BFs %>%
+  ggplot() +
+  geom_brain(atlas = aseg, 
+             position = position_brain(hemi ~ side),
+             aes(fill = b))
 
 
 
