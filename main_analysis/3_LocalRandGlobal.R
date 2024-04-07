@@ -429,24 +429,24 @@ f3_CT_BFs$logBF[f3_CT_BFs$bf <= -1 & f3_CT_BFs$bf >= -1.1] <- "H0 anecdotal"
 f3_CT_BFs$logBF[f3_CT_BFs$bf > -1] <- "no evidence"
 
 
-f3_CT_BFs$logBF <- factor(f3_CT_BFs$logBF, levels = c("H0 extreme", "H0 very strong", "H0 strong", "H0 substantial", "H0 anecdotal", "no evidence",
-                                                      "H1 anecdotal", "H1 substantial", "H1 strong", "H1 very strong", "H1 extreme"))
+f3_CT_BFs$logBF <- factor(f3_CT_BFs$logBF, levels = c("H1 extreme", "H1 very strong", "H1 strong", "H1 substantial", "H1 anecdotal", "no evidence",
+                                                      "H0 anecdotal", "H0 substantial", "H0 strong", "H0 very strong", "H0 extreme"))
 
 # now for the brain plt'n
-f3_CT_BFs %>%
+plt_f3_CT <- f3_CT_BFs %>%
   ggplot() +
   geom_brain(atlas = dk, 
              #position = position_brain(hemi ~ side),
              aes(fill = logBF),
              show.legend = TRUE) +
   theme_void() +
-  scale_fill_manual(values = c(heatmaply::RdBu(10)[10], heatmaply::RdBu(10)[9], heatmaply::RdBu(10)[8], heatmaply::RdBu(10)[7], heatmaply::RdBu(10)[6],
+  scale_fill_manual(values = c(heatmaply::RdBu(10)[1], heatmaply::RdBu(10)[2], heatmaply::RdBu(10)[3], heatmaply::RdBu(10)[4], heatmaply::RdBu(10)[5],
                                "white",
-                               heatmaply::RdBu(10)[5], heatmaply::RdBu(10)[4], heatmaply::RdBu(10)[3], heatmaply::RdBu(10)[2], heatmaply::RdBu(10)[1]),
-                    name="log BF", labels=c("H0 extreme", "H0 very strong", "H0 strong", "H0 substantial", "H0 anecdotal", "no evidence",
-                                            "H1 anecdotal", "H1 substantial", "H1 strong", "H1 very strong", "H1 extreme"), 
+                               heatmaply::RdBu(10)[6], heatmaply::RdBu(10)[7], heatmaply::RdBu(10)[8], heatmaply::RdBu(10)[9], heatmaply::RdBu(10)[10]),
+                    name="Strength of Evidence \n(bayes factors)", labels=c("H1 extreme", "H1 very strong", "H1 strong", "H1 substantial", "H1 anecdotal", "no evidence",
+                                            "H0 anecdotal", "H0 substantial", "H0 strong", "H0 very strong", "H0 extreme"), 
                     drop=FALSE,
-                    na.value = "white")
+                    na.value = "white", na.translate = F)
 
 
 
