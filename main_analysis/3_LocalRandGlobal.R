@@ -32,7 +32,7 @@ if (!require(pacman)){
 }
 
 pacman::p_load(tidyverse, lubridate, stringr, RDHonest, fastDummies, mice, ggseg, anytime, kableExtra,
-               rstanarm, insight, bayestestR, furrr, bayesplot, ggseg)
+               rstanarm, insight, bayestestR, furrr, bayesplot, ggseg, ggsegTracula)
 plan(multisession, workers = 4) 
 # grab functions
 source("~/projects/roslaUKB/main_analysis/0_functions.R") 
@@ -413,14 +413,41 @@ f3_CT_BFs <- tibble(
   label = roi_vec,
   bf = bf_vec)
 # this took FOREVER!!!
-data.table::fwrite(f3_CT_BFs, "/Volumes/home/lifespan/nicjud/UKB/proc/20240405_CTroiBFs.csv")
+# data.table::fwrite(f3_CT_BFs, "/Volumes/home/lifespan/nicjud/UKB/proc/20240405_CTroiBFs.csv")
+f3_CT_BFs <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/proc/20240405_CTroiBFs.csv")
+
+
+
+# https://github.com/tidyverse/ggplot2/issues/5728
+
+f3_CT_BFs$logBF <- rep(NA, length(f3_CT_BFs$bf))
+f3_CT_BFs$logBF[f3_CT_BFs$bf <= -4.6] <- "H0 extreme"
+f3_CT_BFs$logBF[f3_CT_BFs$bf <= -3.4 & f3_CT_BFs$bf >= -4.6] <- "H0 very strong"
+f3_CT_BFs$logBF[f3_CT_BFs$bf <= -2.3 & f3_CT_BFs$bf >= -3.4] <- "H0 strong"
+f3_CT_BFs$logBF[f3_CT_BFs$bf <= -1.1 & f3_CT_BFs$bf >= -2.3] <- "H0 substantial"
+f3_CT_BFs$logBF[f3_CT_BFs$bf <= -1 & f3_CT_BFs$bf >= -1.1] <- "H0 anecdotal"
+f3_CT_BFs$logBF[f3_CT_BFs$bf > -1] <- "no evidence"
+
+
+f3_CT_BFs$logBF <- factor(f3_CT_BFs$logBF, levels = c("H0 extreme", "H0 very strong", "H0 strong", "H0 substantial", "H0 anecdotal", "no evidence",
+                                                      "H1 anecdotal", "H1 substantial", "H1 strong", "H1 very strong", "H1 extreme"))
 
 # now for the brain plt'n
 f3_CT_BFs %>%
   ggplot() +
   geom_brain(atlas = dk, 
-             position = position_brain(hemi ~ side),
-             aes(fill = bf))
+             #position = position_brain(hemi ~ side),
+             aes(fill = logBF),
+             show.legend = TRUE) +
+  theme_void() +
+  scale_fill_manual(values = c(heatmaply::RdBu(10)[10], heatmaply::RdBu(10)[9], heatmaply::RdBu(10)[8], heatmaply::RdBu(10)[7], heatmaply::RdBu(10)[6],
+                               "white",
+                               heatmaply::RdBu(10)[5], heatmaply::RdBu(10)[4], heatmaply::RdBu(10)[3], heatmaply::RdBu(10)[2], heatmaply::RdBu(10)[1]),
+                    name="log BF", labels=c("H0 extreme", "H0 very strong", "H0 strong", "H0 substantial", "H0 anecdotal", "no evidence",
+                                            "H1 anecdotal", "H1 substantial", "H1 strong", "H1 very strong", "H1 extreme"), 
+                    drop=FALSE,
+                    na.value = "white")
+
 
 
 # now for FA
@@ -499,8 +526,20 @@ aseg_edit$hemi[aseg_edit$hemi == "left"] <- rep("lh_", length(aseg_edit$hemi[ase
 aseg_edit$hemi[aseg_edit$hemi == "right"] <- rep("rh_", length(aseg_edit$hemi[aseg_edit$hemi == "right"]))
 
 
+aseg_edit$hemi <- str_c(aseg_edit$hemi, str_remove(aseg_edit$region, " "))
 
-tolower(f3_SUB_BFs$label)
+data.frame(aseg_edit$hemi, tolower(f3_SUB_BFs$label[-c(18,9)]))
+
+aseg_edit$hemi[!aseg_edit$hemi %in% tolower(f3_SUB_BFs$label[-c(18,9)])]
+
+tolower(f3_SUB_BFs$label[-c(18,9)])[!tolower(f3_SUB_BFs$label[-c(18,9)]) %in% aseg_edit$hemi]
+
+#### some are missing...
+
+
+
+
+
 
 # need to make it friendly to join with aseg
 f3_SUB_BFs$hemi <- rep(NA, length(f3_SUB_BFs$label))
