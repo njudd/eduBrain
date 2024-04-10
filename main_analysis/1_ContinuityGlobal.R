@@ -32,7 +32,7 @@ source("~/projects/roslaUKB/main_analysis/0_functions.R")
 # function: vec_to_fence() takes a vector and puts outliers to the fence (i.e., boxplot.stats)
 # function: RDjacked() for cov corrected fuzzy RD
 
-pacman::p_load(tidyverse, lubridate, stringr, RDHonest, fastDummies, mice, ggseg, kableExtra, rddensity, patchwork)
+pacman::p_load(tidyverse, lubridate, stringr, RDHonest, fastDummies, mice, ggseg, kableExtra, rddensity, patchwork, ggrain)
 
 ##### ##### ##### ##### 
 ##### helpful code!!!
@@ -182,6 +182,42 @@ fullset <- wFA[fullset, on ="eid"]
 
 ### saving the result
 # data.table::fwrite(fullset, "/Volumes/home/lifespan/nicjud/UKB/proc/20240223_fullset.csv")
+# fullset <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/proc/20240223_fullset.csv")
+
+# getting the time between ROSLA & scanning :) for neuroimaging peeepz
+scanage <- fullset[!is.na(visit_date),]
+
+# lets make it a bit more representative of the sample by making sure they have at least 1 global neuro cov
+
+scanage$nodata <- is.na(scanage$TBV_norm) + is.na(scanage$CT) + is.na(scanage$SA) + is.na(scanage$wFA) + is.na(scanage$CSF_norm) + is.na(scanage$WM_hyper)
+scanage <- scanage[!nodata == 6] # CANNOT have all 6 missing
+
+# visit_data_correct is just the error (first sub minus everyone)
+
+scanage$DOB <- ym(str_c(scanage$year,"-", scanage$month))
+
+# ggplot(scanage, aes(1, DOB)) + ggrain::geom_rain(point.args = list(alpha = .01))
+
+#age of scan
+scanage$AOS <- interval(scanage$DOB, scanage$visit_date) %/% months(1)/12
+SI_descpAGEplt <- ggplot(scanage, aes(1, AOS)) + 
+  geom_rain(point.args = list(alpha = .08), fill = "#EC7063",
+                    point.args.pos = list(position = position_jitter(width = 0.06, height = 0, seed = 42))) +
+  theme_minimal(base_size = 25) +
+  labs(x = "", y = "Age at neuroimaging") +
+  theme(axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
+  scale_y_continuous(breaks = c(50,55,60,65,70,75,80))
+
+ggsave("~/Google Drive/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/plts/SI_FigScanAGE.png", 
+       SI_descpAGEplt, bg = "white")
+
+# looks normal take the mean
+mean(scanage$AOS) # 61.89 ~ 62
+
+62-16 # 16 because it is the years AFTER the intervention
+
+# 46 years
 
 # issue of visit days vs Running var & DOB
 
@@ -290,6 +326,18 @@ WMh = WMh[complete.cases(WMh),] #32676 to 31698
 CSFn = CSFn[complete.cases(CSFn),] #33634 to 32102
 TBVn = TBVn[complete.cases(TBVn),] #33634 to 32102
 wFAs = wFAs[complete.cases(wFAs),]
+
+
+
+## new RD package with covs SA | EduAge16 ~ running_var | covs  
+# packageVersion("RDHonest") # 0.4.1 -----> 0.9
+# 
+# RDHonest(SA | EduAge16 ~ running_var, data = sa)
+
+
+
+
+
 
 
 m1_sa_fuzzy = RDjacked("SA", "running_var", fuzzy = 'EduAge16', df = sa, covs = covs) #352 t2_FLAIR
@@ -504,11 +552,11 @@ CSFnplt / WMhplt +
 # Density of the running variable, silly test for ROSLA
 # rddensity: all statistics & default options
 # it is assuming something not great about zero; redoing the running var to fix this
-fullset$running_var_SHIFT <- fullset$running_var # shifting positive values by 1; so 0 -> 1, etc etc...
-fullset$running_var_SHIFT[fullset$running_var_SHIFT >=0] <- fullset$running_var_SHIFT[fullset$running_var_SHIFT >=0] +1
+scanage$running_var_SHIFT <- scanage$running_var # shifting positive values by 1; so 0 -> 1, etc etc...
+scanage$running_var_SHIFT[scanage$running_var_SHIFT >=0] <- scanage$running_var_SHIFT[scanage$running_var_SHIFT >=0] +1
 
-dens_test <- rddensity(X = fullset$running_var_SHIFT[!is.na(fullset$visit_date)]) 
-#^^^** gonna have to figure out how to report this; since you can't extract it
+# scanage is a better representation of the included subjects!
+dens_test <- rddensity(X = scanage$running_var_SHIFT) 
 
 # testing the covariates
 simple_fuzzy <- function(f, dt){
