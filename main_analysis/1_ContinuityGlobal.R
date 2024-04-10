@@ -200,17 +200,17 @@ scanage$DOB <- ym(str_c(scanage$year,"-", scanage$month))
 
 #age of scan
 scanage$AOS <- interval(scanage$DOB, scanage$visit_date) %/% months(1)/12
-SI_descpAGEplt <- ggplot(scanage, aes(1, AOS)) + 
-  geom_rain(point.args = list(alpha = .08), fill = "#EC7063",
-                    point.args.pos = list(position = position_jitter(width = 0.06, height = 0, seed = 42))) +
-  theme_minimal(base_size = 25) +
-  labs(x = "", y = "Age at neuroimaging") +
-  theme(axis.text.x=element_blank(),
-        axis.ticks.x=element_blank()) +
-  scale_y_continuous(breaks = c(50,55,60,65,70,75,80))
-
-ggsave("~/Google Drive/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/plts/SI_FigScanAGE.png", 
-       SI_descpAGEplt, bg = "white")
+# SI_descpAGEplt <- ggplot(scanage, aes(1, AOS)) + 
+#   geom_rain(point.args = list(alpha = .08), fill = "#EC7063",
+#                     point.args.pos = list(position = position_jitter(width = 0.06, height = 0, seed = 42))) +
+#   theme_minimal(base_size = 25) +
+#   labs(x = "", y = "Age at neuroimaging") +
+#   theme(axis.text.x=element_blank(),
+#         axis.ticks.x=element_blank()) +
+#   scale_y_continuous(breaks = c(50,55,60,65,70,75,80))
+# 
+# ggsave("~/Google Drive/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/plts/SI_FigScanAGE.png", 
+#        SI_descpAGEplt, bg = "white")
 
 # looks normal take the mean
 mean(scanage$AOS) # 61.89 ~ 62
