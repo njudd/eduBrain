@@ -33,6 +33,13 @@ if (!require(pacman)){
 
 pacman::p_load(tidyverse, lubridate, stringr, RDHonest, fastDummies, mice, ggseg, anytime, kableExtra,
                rstanarm, insight, bayestestR, furrr, bayesplot, ggseg, ggsegTracula)
+
+# Enable this universe
+# options(repos = c(
+#   ggseg = 'https://ggseg.r-universe.dev',
+#   CRAN = 'https://cloud.r-project.org'))
+# install.packages('ggsegTracula')
+
 plan(multisession, workers = 4) 
 # grab functions
 source("~/projects/roslaUKB/main_analysis/0_functions.R") 
@@ -380,11 +387,102 @@ f3_SA_BFs <- tibble(
 data.table::fwrite(f3_SA_BFs, "/Volumes/home/lifespan/nicjud/UKB/proc/20240405_SAroiBFs.csv")
 
 # now for the brain plt'n
+f3_SA_BFs$logBF <- rep(NA, length(f3_SA_BFs$bf))
+f3_SA_BFs$logBF[f3_SA_BFs$bf <= -4.6] <- "H0 extreme"
+f3_SA_BFs$logBF[f3_SA_BFs$bf <= -3.4 & f3_SA_BFs$bf >= -4.6] <- "H0 very strong"
+f3_SA_BFs$logBF[f3_SA_BFs$bf <= -2.3 & f3_SA_BFs$bf >= -3.4] <- "H0 strong"
+f3_SA_BFs$logBF[f3_SA_BFs$bf <= -1.1 & f3_SA_BFs$bf >= -2.3] <- "H0 substantial"
+f3_SA_BFs$logBF[f3_SA_BFs$bf <= -1 & f3_SA_BFs$bf >= -1.1] <- "H0 anecdotal"
+f3_SA_BFs$logBF[f3_SA_BFs$bf > -1] <- "No evidence"
+
+
+f3_SA_BFs$logBF <- factor(f3_SA_BFs$logBF, levels = c("H1 extreme", "H1 very strong", "H1 strong", "H1 substantial", "H1 anecdotal", "no evidence",
+                                                      "H0 anecdotal", "H0 substantial", "H0 strong", "H0 very strong", "H0 extreme"))
+
+
+
+################## start playspace ################## 
+################## trying cont color sclae ################## 
+
+
+
+# working on the contineous color scale
+#https://stackoverflow.com/questions/58698075/assign-specific-color-to-definite-value-in-bar-plot-using-scale-fill-gradientn/58699545#58699545
+# https://stackoverflow.com/questions/67082430/how-to-highlight-a-single-value-on-a-continuous-color-scale-in-ggplot2
+
+# Define an area to set to white
+target <- (c(19.5, 20.5) - min(data$IP)) / (max(data$IP) - min(data$IP))
+
+# Build a palette function
+my_palette <- function(colours, values = NULL) {
+  ramp <- scales::colour_ramp(colours)
+  force(values)
+  function(x) {
+    # Decide what values to replace
+    replace <- x > target[1] & x < target[2]
+    if (length(x) == 0)
+      return(character())
+    if (!is.null(values)) {
+      xs <- seq(0, 1, length.out = length(values))
+      f <- stats::approxfun(values, xs)
+      x <- f(x)
+    }
+    out <- ramp(x)
+    # Actually replace values
+    out[replace] <- "white"
+    out
+  }
+}
+
+
+
+
 f3_SA_BFs %>%
   ggplot() +
-  geom_brain(atlas = dk, 
-             position = position_brain(hemi ~ side),
-             aes(fill = bf))
+  geom_brain(atlas = dk,
+             position = position_brain(side ~ hemi),
+             aes(fill = bf),
+             show.legend = TRUE) +
+  scale_fill_gradient2(low = heatmaply::RdBu(10)[1], mid = "white", high = heatmaply::RdBu(10)[10])
+  
+
+
+  
+  scale_color_brewer("RdBu") +
+  scale_fill_brewer("RdBu")
+  
+  # theme_void() +
+  scale_color_brain()("RdBu")
+
+
+################## end playspace ################## 
+
+
+
+
+
+
+
+
+# now for the brain plt'n
+# https://github.com/tidyverse/ggplot2/issues/5728
+plt_f3_SA <- f3_SA_BFs %>%
+  ggplot() +
+  geom_brain(atlas = dk, colour = "black",
+             position = position_brain(side ~ hemi),
+             aes(fill = logBF),
+             show.legend = TRUE) +
+  theme_void() +
+  scale_fill_manual(values = c(heatmaply::RdBu(10)[1], heatmaply::RdBu(10)[2], heatmaply::RdBu(10)[3], heatmaply::RdBu(10)[4], heatmaply::RdBu(10)[5],
+                               "white",
+                               heatmaply::RdBu(10)[6], heatmaply::RdBu(10)[7], heatmaply::RdBu(10)[8], heatmaply::RdBu(10)[9], heatmaply::RdBu(10)[10]),
+                    name="Strength of Evidence \nin Bayes Factors", labels=c("H1 extreme", "H1 very strong", "H1 strong", "H1 substantial", "H1 anecdotal", "No evidence",
+                                                                             "H0 anecdotal", "H0 substantial", "H0 strong", "H0 very strong", "H0 extreme"), 
+                    drop=FALSE,
+                    na.value = "white", na.translate = F)
+
+ggsave("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/plts/SI_plt3_SA.png",
+       plt_f3_SA, bg = "white")
 
 # now for CT
 rm(list = c("saROI", "f3_SAroi"))
@@ -419,14 +517,13 @@ f3_CT_BFs <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/proc/20240405_
 
 
 # https://github.com/tidyverse/ggplot2/issues/5728
-
 f3_CT_BFs$logBF <- rep(NA, length(f3_CT_BFs$bf))
 f3_CT_BFs$logBF[f3_CT_BFs$bf <= -4.6] <- "H0 extreme"
 f3_CT_BFs$logBF[f3_CT_BFs$bf <= -3.4 & f3_CT_BFs$bf >= -4.6] <- "H0 very strong"
 f3_CT_BFs$logBF[f3_CT_BFs$bf <= -2.3 & f3_CT_BFs$bf >= -3.4] <- "H0 strong"
 f3_CT_BFs$logBF[f3_CT_BFs$bf <= -1.1 & f3_CT_BFs$bf >= -2.3] <- "H0 substantial"
 f3_CT_BFs$logBF[f3_CT_BFs$bf <= -1 & f3_CT_BFs$bf >= -1.1] <- "H0 anecdotal"
-f3_CT_BFs$logBF[f3_CT_BFs$bf > -1] <- "no evidence"
+f3_CT_BFs$logBF[f3_CT_BFs$bf > -1] <- "No evidence"
 
 
 f3_CT_BFs$logBF <- factor(f3_CT_BFs$logBF, levels = c("H1 extreme", "H1 very strong", "H1 strong", "H1 substantial", "H1 anecdotal", "no evidence",
@@ -435,20 +532,21 @@ f3_CT_BFs$logBF <- factor(f3_CT_BFs$logBF, levels = c("H1 extreme", "H1 very str
 # now for the brain plt'n
 plt_f3_CT <- f3_CT_BFs %>%
   ggplot() +
-  geom_brain(atlas = dk, 
-             #position = position_brain(hemi ~ side),
+  geom_brain(atlas = dk, colour = "black",
+             position = position_brain(side ~ hemi),
              aes(fill = logBF),
              show.legend = TRUE) +
   theme_void() +
   scale_fill_manual(values = c(heatmaply::RdBu(10)[1], heatmaply::RdBu(10)[2], heatmaply::RdBu(10)[3], heatmaply::RdBu(10)[4], heatmaply::RdBu(10)[5],
                                "white",
                                heatmaply::RdBu(10)[6], heatmaply::RdBu(10)[7], heatmaply::RdBu(10)[8], heatmaply::RdBu(10)[9], heatmaply::RdBu(10)[10]),
-                    name="Strength of Evidence \n(bayes factors)", labels=c("H1 extreme", "H1 very strong", "H1 strong", "H1 substantial", "H1 anecdotal", "no evidence",
+                    name="Strength of Evidence \nin Bayes Factors", labels=c("H1 extreme", "H1 very strong", "H1 strong", "H1 substantial", "H1 anecdotal", "No evidence",
                                             "H0 anecdotal", "H0 substantial", "H0 strong", "H0 very strong", "H0 extreme"), 
                     drop=FALSE,
                     na.value = "white", na.translate = F)
 
-
+ggsave("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/plts/Plt3_CT.png",
+       plt_f3_CT, bg = "white")
 
 # now for FA
 rm(list = c("ctROI", "f3_CTroi"))
@@ -480,9 +578,29 @@ f3_FA_BFs <- tibble(
 data.table::fwrite(f3_FA_BFs, "/Volumes/home/lifespan/nicjud/UKB/proc/20240405_FAroiBFs.csv")
 
 
+# it is not this atlas so just ignore for now...
+# as.data.frame(tracula$data)[,1:4]
+# it is named differently....also dim(tracula$data) is 38...
 
 
 
+
+
+
+
+
+# f3_FA_BFs %>% 
+#   ggplot() +
+#   geom_brain(atlas = tracula, 
+#              #position = position_brain(hemi ~ side),
+#              aes(fill = logBF),
+#              show.legend = TRUE)
+# 
+# 
+# plot(tracula) +
+#   theme(legend.position = "bottom", 
+#         legend.text = element_text(size = 9)) +
+#   guides(fill = guide_legend(ncol = 3))
 
 
 
@@ -532,29 +650,32 @@ data.frame(aseg_edit$hemi, tolower(f3_SUB_BFs$label[-c(18,9)]))
 
 aseg_edit$hemi[!aseg_edit$hemi %in% tolower(f3_SUB_BFs$label[-c(18,9)])]
 
-tolower(f3_SUB_BFs$label[-c(18,9)])[!tolower(f3_SUB_BFs$label[-c(18,9)]) %in% aseg_edit$hemi]
 
-#### some are missing...
+f3_SUB_BFs$label <- tolower(f3_SUB_BFs$label)
 
+# reworking
+f3_SUB_BFs <- f3_SUB_BFs[,-3]
+colnames(f3_SUB_BFs)[1] <- "hemi"
 
+SUBplt_data <- left_join(data.frame(hemi = aseg_edit$hemi, label = aseg_edit$label), f3_SUB_BFs)
 
+colnames(SUBplt_data)[1] <- "NOThemi"
 
-
-
-# need to make it friendly to join with aseg
-f3_SUB_BFs$hemi <- rep(NA, length(f3_SUB_BFs$label))
-f3_SUB_BFs$hemi[str_detect(f3_SUB_BFs$label, "lh")] <- rep("left", sum(str_detect(f3_SUB_BFs$label, "lh")))
-f3_SUB_BFs$hemi[str_detect(f3_SUB_BFs$label, "rh")] <- rep("right", sum(str_detect(f3_SUB_BFs$label, "rh")))
-
-
-
-
-f3_SUB_BFs %>%
+SUBplt_data %>%
   ggplot() +
   geom_brain(atlas = aseg, 
-             position = position_brain(hemi ~ side),
-             aes(fill = b))
+             #position = position_brain(hemi ~ side),
+             aes(fill = bf))
 
+ggplot() +
+  geom_brain(atlas = aseg)
+
+
+SUBplt_data %>%
+  ggplot() +
+  geom_brain(atlas = aseg, 
+             # position = position_brain(hemi ~ side),
+             aes(color = bf))
 
 
 
