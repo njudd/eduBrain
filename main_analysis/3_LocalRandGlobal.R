@@ -235,71 +235,6 @@ m6Bayes_1SD %>%
 #### 3.4 6 month window diagnostics and plotting ####
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 
-
-# default_prior_coef()
-
-b6$SA.s <- as.numeric(scale(b6$SA))
-
-
-### do this on the whole dataset...
-
-# f2 <- paste(c(paste0(y, "~", running, "*I(", running, ">=0)"), covs), collapse=" + ")
-# r2 <- lm(f2, data = df2)
-# df$y_adj <- drop(df[,y]-as.matrix(df[, covs]) %*% r2$coefficients[covs])
-
-
-
-first_stage <- stan_glm("SA.s ~ running_var", data = b6, iter = 40000)
-prior_summary(first_stage)
-
-?default_prior_coef
-
-bayesfactor_parameters(first_stage, null = 0)
-
-bayesfactor_parameters(as.matrix(first_stage)[,2], prior = distribution_normal(40000, 0, 0.86))
-
-# my_prior <- cauchy(location = 0, scale = 1, autoscale = TRUE)
-
-my_prior <- normarl(location = 0, scale = 1, autoscale = TRUE)
-first_stage_Chaucy <- stan_glm("SA.s ~ running_var", data = b6, iter = 40000, prior = my_prior)
-prior_summary(first_stage_Chaucy)
-bayesfactor_parameters(first_stage_Chaucy, null = 0)
-
-
-bayesfactor_parameters(as.matrix(first_stage)[,2], prior = distribution_cauchy(40000, 0, 1))
-
-
-library(brms)
-
-m1_brms <- brm("SA.s ~ running_var", data = b6, 
-               prior= prior(cauchy(0,1), coef = running_var), autoscale = TRUE)
-prior_summary(m1_brms)
-
-bayesfactor_parameters(m1_brms, null = 0)
-
-
-
-bayesfactor_parameters(as.matrix(first_stage)[,2], prior = distribution_cauchy(40000, 0, 73532.32))
-
-
-
-bayesfactor_parameters(first_stage, null = 0)
-
-sd(b1$running_var); sd(b1$SA, na.rm = T)
-
-bayesfactor_parameters(first_stage)
-
-head(get_parameters(first_stage))
-prior_summary(first_stage)
-
-
-
-hdi(first_stage)
-first_stage_bf <- bayesfactor_parameters(first_stage, null = 0)
-
-
-
-
 # first testing the covariates again in the 6mnth window...
 # "we will analyze predetermined covariates and placebo outcomes similarly to the local-linear approach"
 
@@ -307,15 +242,13 @@ first_stage_bf <- bayesfactor_parameters(first_stage, null = 0)
 # b6_covsT <- c(b6_covs, "imaging_center_11025")
 
 # b6_covsT %>%
-#   future_map(~bayesFIT(., "ROSLA", covs = c(), b6), .options = furrr_options(seed = T)) %>% 
+#   future_map(~bayesFIT(., "ROSLA", covs = c(), b6, BF_prior = normal(location = 0, scale = 1, autoscale = TRUE)), .options = furrr_options(seed = T)) %>%
 #   future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) %>%
 #   kbl(caption = "5 Month Bandwidth Covariates Bayesian Test") %>%
 #   kable_styling("hover", full_width = F) %>%
-#   save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/localRand/5mBayes_cov.html")
+#   save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/localRand/20240414_5mBayes_cov_Prior1SD.html")
 
 # again no point in moving the window up or down a year since there are no sig results to disprove/test
-
-
 
 # plotting posterior Total Surface area & CSF_norm for 5 month Local Rand
 
