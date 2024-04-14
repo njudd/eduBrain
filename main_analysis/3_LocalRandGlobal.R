@@ -131,13 +131,14 @@ m1Bayes_1SD %>%
 # missing one of the centers for the covariate test, since it is dummy coded
 # b1$imaging_center_11025 <- b1$imaging_center == 11025
 # b1_covsT <- c(b1_covs, "imaging_center_11025")
-
 # b1CovTest <- b1_covsT %>%
-#   future_map(~bayesFIT(., "ROSLA", covs = c(), b1), .options = furrr_options(seed = T)) %>% 
+#   future_map(~bayesFIT(., "ROSLA", covs = c(), b1, BF_prior = normal(location = 0, scale = 1, autoscale = TRUE)), .options = furrr_options(seed = T)) %>%
 #   future_map_dfr(~bayes_to_results(list(.))) %>%
 #   kbl(caption = "1 Month Bandwidth Covariates Bayesian Test") %>%
 #   kable_styling("hover", full_width = F) %>%
-#   save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/localRand/1mBayes_cov.html")
+#   save_kable("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/localRand/20240414_1mBayes_cov_Prior1SD.html")
+
+
 
 # by moving the cutoff up a year (Sept. 1958), up two years (Sept. 1959), down a year (Sept. 1956), and down two years (Sept. 1955). 
 # This doesn't make much sense if you don't have an effect... so we will not do it
@@ -241,12 +242,12 @@ m6Bayes_1SD %>%
 # b6$imaging_center_11025 <- b6$imaging_center == 11025
 # b6_covsT <- c(b6_covs, "imaging_center_11025")
 
-# b6_covsT %>%
-#   future_map(~bayesFIT(., "ROSLA", covs = c(), b6, BF_prior = normal(location = 0, scale = 1, autoscale = TRUE)), .options = furrr_options(seed = T)) %>%
-#   future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) %>%
-#   kbl(caption = "5 Month Bandwidth Covariates Bayesian Test") %>%
-#   kable_styling("hover", full_width = F) %>%
-#   save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/localRand/20240414_5mBayes_cov_Prior1SD.html")
+b6_covsT %>%
+  future_map(~bayesFIT(., "ROSLA", covs = c(), b6, BF_prior = normal(location = 0, scale = 1, autoscale = TRUE)), .options = furrr_options(seed = T)) %>%
+  future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) %>%
+  kbl(caption = "5 Month Bandwidth Covariates Bayesian Test") %>%
+  kable_styling("hover", full_width = F) %>%
+  save_kable("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/localRand/20240414_5mBayes_cov_Prior1SD.html")
 
 # again no point in moving the window up or down a year since there are no sig results to disprove/test
 
