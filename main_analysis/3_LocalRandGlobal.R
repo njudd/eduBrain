@@ -91,6 +91,31 @@ IVs <- rep(c("ROSLA", "EduAge"), 6)
 
 # plan(multisession, workers = 4) # Look at the start of the script for a map2 explanation
 
+# https://discourse.mc-stan.org/t/evidence-ratios-when-using-default-priors/4847
+# never use the STAN defaults for BayesFactors
+
+# The Bayes Factor package uses a Cauchy(0, .7) as default
+# plot(x, dnorm(x, sd = .7),type="l", col = "blue")
+# lines(x, dcauchy(x, scale = .7),type="l", col = "purple")
+# lines(x, dnorm(x, sd = 1),type="l", col = "red")
+
+# stan_glm can't specify priors to specific terms & I couldn't get scalling (e.g., autoscale) to work in brms
+
+# Hi Markus,
+# 
+# For the Cauchy, the prior width r equals the interquartile range. So if r=0.707, 
+# there is a 50% chance that the true value of effect size lies in the interval from -0.707 to +0.707. 
+# I encourage you to read the papers on Bayesian inference (part I and II) here: https://osf.io/m6bi8/
+#   
+# Finally, people who argue for a lower value of r fail to understand that lowering the width r but keeping the location fixed at 0 has undesirable consequences, 
+# as this just makes H1 very similar to H0. If you feel that your effect sizes are around .36, 
+# you should have a prior that peaks around .36. Right now the only parameter to adjust is the width 
+# (we are working on this). Bottom-line: just use the default.
+# 
+# Cheers,
+# E.J.
+
+
 # 1 SD scalled priors
 modB1_1sd <- future_map2(DVs, IVs, \(y, x) bayesFIT(y, x, b1_covs, b1,BF_prior = normal(location = 0, scale = 1, autoscale = TRUE)), .options = furrr_options(seed = T))
 m1Bayes_1SD <- modB1_1sd %>%
