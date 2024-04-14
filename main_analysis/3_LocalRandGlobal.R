@@ -90,28 +90,36 @@ DVs <- rep(c("SA", "CT", "CSF_norm", "TBV_norm", "WM_hyper", "wFA"), each = 2) #
 IVs <- rep(c("ROSLA", "EduAge"), 6)
 
 # plan(multisession, workers = 4) # Look at the start of the script for a map2 explanation
-modB1 <- future_map2(DVs, IVs, \(y, x) bayesFIT(y, x, b1_covs, b1),
-                   .options = furrr_options(seed = T))
 
-# bayes_to_results(modB1) %>%
-#   kbl(caption = "One Month Bandwidth Bayesian Analysis") %>%
-#   kable_styling("hover", full_width = F) %>%
-#   save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/localRand/1mBayes.html")
+# 1 SD scalled priors
+modB1_1sd <- future_map2(DVs, IVs, \(y, x) bayesFIT(y, x, b1_covs, b1,BF_prior = normal(location = 0, scale = 1, autoscale = TRUE)), .options = furrr_options(seed = T))
+m1Bayes_1SD <- modB1_1sd %>%
+  future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) 
+# .5 SD # prior_summary(modB1_.5sd[[1]])
+modB1_.5sd <- future_map2(DVs, IVs, \(y, x) bayesFIT(y, x, b1_covs, b1, BF_prior = normal(location = 0, scale = .5, autoscale = TRUE)), .options = furrr_options(seed = T))
+m1Bayes_.5SD <- modB1_.5sd %>%
+  future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) 
+# 1.5 SD
+modB1_1.5sd <- future_map2(DVs, IVs, \(y, x) bayesFIT(y, x, b1_covs, b1, BF_prior = normal(location = 0, scale = 1.5, autoscale = TRUE)), .options = furrr_options(seed = T))
+m1Bayes_1.5SD <- modB1_1.5sd %>%
+  future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) 
 
+m1Bayes_1SD <- m1Bayes_1SD[,c(1,2,3,5,8,9,7,6)]
 
-# doublechecking results playspace
-# ct <- bayes_to_results(modB1)
-# bayesfactor_parameters(as.matrix(modB1[[1]])[,2], prior = distribution_normal(160000, 0, 73532.32))
-# m1bf <- bayesfactor_parameters(modB1[[1]], parameters = "ROSLATRUE")
-# plot(m1bf)
-# summary(modB1[[1]])
-# bayesfactor_parameters(modB6[[1]])
-# m6bf <- bayesfactor_parameters(modB6[[1]], parameters = "ROSLATRUE")
-# m1bf$log
-# prior_summary(modB1[[1]])
+colnames(m1Bayes_1SD)[c(8,7)] <- c("logBF_1", "BF_1")
+# colnames(m1Bayes_1SD)[c(7,8)] <- c("BF_1SD", "logBF_1SD")
+m1Bayes_1SD$BF_0.5 <- m1Bayes_.5SD$BF
+m1Bayes_1SD$BF_1.5 <- m1Bayes_1.5SD$BF
 
+# credible intervals; getting rid of low, high & puting it in the right spot
+m1Bayes_1SD$ci_low <- stringi::stri_c("(", m1Bayes_1SD$ci_low, ", ", m1Bayes_1SD$ci_high, ")")
+m1Bayes_1SD <- m1Bayes_1SD[,-6] # getting rid of high
+colnames(m1Bayes_1SD)[5] <- "CI" # renaming low
 
-
+m1Bayes_1SD %>% 
+  kbl(caption = "One Month Bandwidth Bayesian Analysis") %>%
+  kable_styling(full_width = F) %>% 
+  save_kable("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/localRand/20240414_1mBayes_correctPriors.html")
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 #### 3.3 1 month window diagnostics and plotting ####
@@ -189,20 +197,108 @@ covs[!covs %in% b1_covs]
 # table(b6$imaging_center_11028) # this is doable...
 b6_covs <- c(b1_covs, "imaging_center_11028")
 
-# plan(multisession, workers = 6) # THIS WORKS
-# modB6 <- future_map2(DVs, IVs, \(y, x) bayesFIT(y, x, b6_covs, b6),
-#                      .options = furrr_options(seed = T))
+plan(multisession, workers = 6) # THIS WORKS
 
-# modB6 %>% 
-#   future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) %>%
-#   kbl(caption = "Five Month Bandwidth Bayesian Analysis") %>%
-#   kable_styling("hover", full_width = F) %>%
-#   save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/localRand/5mBayes.html")
+# 1 SD scalled priors
+m6_1sd <- future_map2(DVs, IVs, \(y, x) bayesFIT(y, x, b6_covs, b6, BF_prior = normal(location = 0, scale = 1, autoscale = TRUE)), .options = furrr_options(seed = T))
+m6Bayes_1SD <- m6_1sd %>%
+  future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) 
+# .5 SD # prior_summary(modB1_.5sd[[1]])
+m6_.5sd <- future_map2(DVs, IVs, \(y, x) bayesFIT(y, x, b6_covs, b6, BF_prior = normal(location = 0, scale = .5, autoscale = TRUE)), .options = furrr_options(seed = T))
+m6Bayes_.5SD <- m6_.5sd %>%
+  future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) 
+# 1.5 SD
+m6_1.5sd <- future_map2(DVs, IVs, \(y, x) bayesFIT(y, x, b6_covs, b6, BF_prior = normal(location = 0, scale = 1.5, autoscale = TRUE)), .options = furrr_options(seed = T))
+m6Bayes_1.5SD <- m6_1.5sd %>%
+  future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T))
+
+# making the table
+m6Bayes_1SD <- m6Bayes_1SD[,c(1,2,3,5,8,9,6,7)]
+colnames(m6Bayes_1SD)[c(7,8)] <- c("logBF_1", "BF_1")
+m6Bayes_1SD$BF_0.5 <- m6Bayes_.5SD$BF
+m6Bayes_1SD$BF_1.5 <- m6Bayes_1.5SD$BF
+
+# credible intervals; getting rid of low, high & puting it in the right spot
+m6Bayes_1SD$ci_low <- stringi::stri_c("(", m6Bayes_1SD$ci_low, ", ", m6Bayes_1SD$ci_high, ")")
+m6Bayes_1SD <- m6Bayes_1SD[,-6] # getting rid of high
+colnames(m6Bayes_1SD)[5] <- "CI" # renaming low
+#putting the right order
+m6Bayes_1SD <- m6Bayes_1SD[, c(1:6,8,7,9)]
+
+m6Bayes_1SD %>% 
+  kbl(caption = "Five Month Bandwidth Bayesian Analysis") %>%
+  kable_styling(full_width = F) %>% 
+  save_kable("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/localRand/20240414_5mBayes_correctPriors.html")
 
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 #### 3.4 6 month window diagnostics and plotting ####
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+
+
+# default_prior_coef()
+
+b6$SA.s <- as.numeric(scale(b6$SA))
+
+
+### do this on the whole dataset...
+
+# f2 <- paste(c(paste0(y, "~", running, "*I(", running, ">=0)"), covs), collapse=" + ")
+# r2 <- lm(f2, data = df2)
+# df$y_adj <- drop(df[,y]-as.matrix(df[, covs]) %*% r2$coefficients[covs])
+
+
+
+first_stage <- stan_glm("SA.s ~ running_var", data = b6, iter = 40000)
+prior_summary(first_stage)
+
+?default_prior_coef
+
+bayesfactor_parameters(first_stage, null = 0)
+
+bayesfactor_parameters(as.matrix(first_stage)[,2], prior = distribution_normal(40000, 0, 0.86))
+
+# my_prior <- cauchy(location = 0, scale = 1, autoscale = TRUE)
+
+my_prior <- normarl(location = 0, scale = 1, autoscale = TRUE)
+first_stage_Chaucy <- stan_glm("SA.s ~ running_var", data = b6, iter = 40000, prior = my_prior)
+prior_summary(first_stage_Chaucy)
+bayesfactor_parameters(first_stage_Chaucy, null = 0)
+
+
+bayesfactor_parameters(as.matrix(first_stage)[,2], prior = distribution_cauchy(40000, 0, 1))
+
+
+library(brms)
+
+m1_brms <- brm("SA.s ~ running_var", data = b6, 
+               prior= prior(cauchy(0,1), coef = running_var), autoscale = TRUE)
+prior_summary(m1_brms)
+
+bayesfactor_parameters(m1_brms, null = 0)
+
+
+
+bayesfactor_parameters(as.matrix(first_stage)[,2], prior = distribution_cauchy(40000, 0, 73532.32))
+
+
+
+bayesfactor_parameters(first_stage, null = 0)
+
+sd(b1$running_var); sd(b1$SA, na.rm = T)
+
+bayesfactor_parameters(first_stage)
+
+head(get_parameters(first_stage))
+prior_summary(first_stage)
+
+
+
+hdi(first_stage)
+first_stage_bf <- bayesfactor_parameters(first_stage, null = 0)
+
+
+
 
 # first testing the covariates again in the 6mnth window...
 # "we will analyze predetermined covariates and placebo outcomes similarly to the local-linear approach"
@@ -437,31 +533,26 @@ my_palette <- function(colours, values = NULL) {
 
 
 
-f3_SA_BFs %>%
+plt_f3_SA_cont <- f3_SA_BFs %>%
   ggplot() +
-  geom_brain(atlas = dk,
+  geom_brain(atlas = dk, color = "black",
              position = position_brain(side ~ hemi),
-             aes(fill = bf),
+             aes(fill = bf, color = bf),
              show.legend = TRUE) +
-  scale_fill_gradient2(low = heatmaply::RdBu(10)[1], mid = "white", high = heatmaply::RdBu(10)[10])
-  
+  theme_void() +
+  theme(legend.position="bottom",legend.direction = "horizontal", legend.box = "horizontal",
+        legend.key.width = unit(2, "cm"),
+        text = element_text(family = 'Arial')) +
+  scale_fill_gradient2(low = heatmaply::RdBu(10)[10], mid = "white", high = heatmaply::RdBu(10)[1],
+                       limits = c(-5.5,5.5), breaks=c(-4.6,-3.4, -2.3, -1, 1, 2.3, 3.4, 4.6),
+                       na.value = "white", name = "Strength of Evidence Log BF",
+                       guide = guide_colorbar(title.position = "top", label.position = "bottom", 
+                                              title.hjust = 0.5)) # centeres the color bar with text
 
 
   
-  scale_color_brewer("RdBu") +
-  scale_fill_brewer("RdBu")
-  
-  # theme_void() +
-  scale_color_brain()("RdBu")
-
-
-################## end playspace ################## 
-
-
-
-
-
-
+ggsave("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/plts/SI_plt3_SA_cont.png",
+       plt_f3_SA_cont, bg = "white", width = 8, height = 5)
 
 
 # now for the brain plt'n
