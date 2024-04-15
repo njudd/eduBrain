@@ -164,7 +164,6 @@ m1Bayes_1SD %>%
 #   save_kable("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/localRand/20240414_1mBayes_cov_Prior1SD.html")
 
 
-
 # by moving the cutoff up a year (Sept. 1958), up two years (Sept. 1959), down a year (Sept. 1956), and down two years (Sept. 1955). 
 # This doesn't make much sense if you don't have an effect... so we will not do it
 
