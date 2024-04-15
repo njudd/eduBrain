@@ -242,12 +242,18 @@ MICE_imp <- function(df, n = 5) {
 # plan(multisession, workers = 6) # THIS WORKS
 # nkj <- future_map2(IVs, DVs, \(x, y) bayesFIT(x, y, b1_covs, b1), .options = furrr_options(seed = T))
 
-bayesFIT <- function(dv, iv, covs, df){
+bayesFIT <- function(dv, iv, covs, df, BF_prior = NULL){
   # fit the model
   
   f <- eval(parse(text = paste0(c(paste(dv, "~", iv), covs), collapse=" + ")))
   #^^^ this is needed for bayesfactor_parameters in bayes_to_results()
-  m <- stan_glm(f, data = df, iter = 80000, refresh=0) #40000
+  
+  if (is.null(BF_prior)){
+    m <- stan_glm(f, data = df, iter = 80000, refresh=0) #40000
+  } else {
+    m <- stan_glm(f, data = df, iter = 80000, refresh=0, prior = BF_prior)
+  }
+  
     # assign it
   # assign(paste0("m", iv,"_", dv), m) #, envir = globalenv()) #  envir = parent.frame()
   
@@ -282,9 +288,18 @@ bayes_to_results <- function(listofMODs){
   
   # ci95 <- stringr::str_c("[", ci_low, ", ", ci_high, "]")
   
-  logBF <- listofMODs %>% map_dbl(~round(bayesfactor_parameters(., null = 0)$log_BF[2], 2))
+  logBF <- listofMODs %>% map_dbl(~bayesfactor_parameters(., null = 0)$log_BF[2])
   
-  df <- data.frame(Y, X, effobs, binsize, median, logBF, ci_low, ci_high) #, median, ci95, logBF)
+  #print(Y); print(X)
+  #print(logBF)
+  if(logBF >= 0 ){
+    BF <- round(exp(logBF),2)
+  } else {
+    BF <- round(-1/exp(logBF),2)
+  }
+  logBF <- round(logBF, 2)
+  
+  df <- data.frame(Y, X, effobs, binsize, median, logBF, BF, ci_low, ci_high) #, median, ci95, logBF)
   return(df)
 }
 
