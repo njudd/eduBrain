@@ -40,7 +40,7 @@ pacman::p_load(tidyverse, lubridate, stringr, RDHonest, fastDummies, mice, ggseg
 #   CRAN = 'https://cloud.r-project.org'))
 # install.packages('ggsegTracula')
 
-plan(multisession, workers = 4) 
+plan(multisession, workers = 6) # THIS WORKS
 # grab functions
 source("~/projects/roslaUKB/main_analysis/0_functions.R") 
 # function: vec_to_fence() takes a vector and puts outliers to the fence (i.e., boxplot.stats)
@@ -80,16 +80,15 @@ b1_covs <- covs[!covs %in% c("summer", "t2_FLAIR", "imaging_center_11028")]
 # first we need to establish that there are more likely in this narrow window to stay until 16
 # First, we established that subjects within this one month window where more likely to stay in school, confirming our instrument.
 
-first_stage <- stan_glm("EduAge16 ~ running_var", data = b1, iter = 40000)
-hdi(first_stage)
-first_stage_bf <- bayesfactor_parameters(first_stage, null = 0)
-first_stage_bf$log_BF[2]
+# no priors on this atm
+# first_stage <- stan_glm("EduAge16 ~ running_var", data = b1, iter = 40000)
+# hdi(first_stage)
+# first_stage_bf <- bayesfactor_parameters(first_stage, null = 0)
+# first_stage_bf$log_BF[2]
 
 # rather than individually fitting 12 STAN models, we will paralize it with future_map2
 DVs <- rep(c("SA", "CT", "CSF_norm", "TBV_norm", "WM_hyper", "wFA"), each = 2) #amazing 
 IVs <- rep(c("ROSLA", "EduAge"), 6)
-
-# plan(multisession, workers = 4) # Look at the start of the script for a map2 explanation
 
 # https://discourse.mc-stan.org/t/evidence-ratios-when-using-default-priors/4847
 # never use the STAN defaults for BayesFactors
@@ -119,7 +118,7 @@ IVs <- rep(c("ROSLA", "EduAge"), 6)
 # 1 SD scalled priors
 modB1_1sd <- future_map2(DVs, IVs, \(y, x) bayesFIT(y, x, b1_covs, b1,BF_prior = normal(location = 0, scale = 1, autoscale = TRUE)), .options = furrr_options(seed = T))
 m1Bayes_1SD <- modB1_1sd %>%
-  future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) 
+  future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T))
 # .5 SD # prior_summary(modB1_.5sd[[1]])
 modB1_.5sd <- future_map2(DVs, IVs, \(y, x) bayesFIT(y, x, b1_covs, b1, BF_prior = normal(location = 0, scale = .5, autoscale = TRUE)), .options = furrr_options(seed = T))
 m1Bayes_.5SD <- modB1_.5sd %>%
@@ -222,8 +221,6 @@ covs[!covs %in% b1_covs]
 # table(b6$imaging_center_11028) # this is doable...
 b6_covs <- c(b1_covs, "imaging_center_11028")
 
-plan(multisession, workers = 6) # THIS WORKS
-
 # 1 SD scalled priors
 m6_1sd <- future_map2(DVs, IVs, \(y, x) bayesFIT(y, x, b6_covs, b6, BF_prior = normal(location = 0, scale = 1, autoscale = TRUE)), .options = furrr_options(seed = T))
 m6Bayes_1SD <- m6_1sd %>%
@@ -266,12 +263,12 @@ m6Bayes_1SD %>%
 # b6$imaging_center_11025 <- b6$imaging_center == 11025
 # b6_covsT <- c(b6_covs, "imaging_center_11025")
 
-b6_covsT %>%
-  future_map(~bayesFIT(., "ROSLA", covs = c(), b6, BF_prior = normal(location = 0, scale = 1, autoscale = TRUE)), .options = furrr_options(seed = T)) %>%
-  future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) %>%
-  kbl(caption = "5 Month Bandwidth Covariates Bayesian Test") %>%
-  kable_styling("hover", full_width = F) %>%
-  save_kable("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/localRand/20240414_5mBayes_cov_Prior1SD.html")
+# b6_covsT %>%
+#   future_map(~bayesFIT(., "ROSLA", covs = c(), b6, BF_prior = normal(location = 0, scale = 1, autoscale = TRUE)), .options = furrr_options(seed = T)) %>%
+#   future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) %>%
+#   kbl(caption = "5 Month Bandwidth Covariates Bayesian Test") %>%
+#   kable_styling("hover", full_width = F) %>%
+#   save_kable("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/localRand/20240414_5mBayes_cov_Prior1SD.html")
 
 # again no point in moving the window up or down a year since there are no sig results to disprove/test
 
@@ -295,45 +292,29 @@ b6_covsT %>%
 
 
 #### trying a plot to show evidence
-
-# B1_results <- modB1 %>% future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) 
-B6_results <- modB6 %>% future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T))
-
 # you just want to show assosiational vs causal BFs
 
-
-# things to make figure better
-# fill in the small triangles; not possible becasue it is a different scale
-# get rid of axis for label
-# rename and order labels corectly
-# rename legend to causal & correlational
-# change the log Bayes axis
-
 # draw arrows of the effect changing 
-hold <- B6_results
+hold <- m6Bayes_1SD
 
 # rename legend to causal & correlational
-B6_results$X[B6_results$X == "ROSLA"] <- "Causal"
-B6_results$X[B6_results$X == "EduAge"] <- "Correlational"
+m6Bayes_1SD$X[m6Bayes_1SD$X == "ROSLA"] <- "Causal"
+m6Bayes_1SD$X[m6Bayes_1SD$X == "EduAge"] <- "Correlational"
 
 # rename and order labels corectly
-B6_results$Y[B6_results$Y == "CSF_norm"] <- "CSF"
-B6_results$Y[B6_results$Y == "TBV_norm"] <- "TBV"
-B6_results$Y[B6_results$Y == "WM_hyper"] <- "WMh"
+m6Bayes_1SD$Y[m6Bayes_1SD$Y == "CSF_norm"] <- "CSF"
+m6Bayes_1SD$Y[m6Bayes_1SD$Y == "TBV_norm"] <- "TBV"
+m6Bayes_1SD$Y[m6Bayes_1SD$Y == "WM_hyper"] <- "WMh"
 
-B6_results$Y <- factor(B6_results$Y, levels = c("CSF", "SA", "wFA", "TBV", "WMh", "CT"))
-
-
-
+m6Bayes_1SD$Y <- factor(m6Bayes_1SD$Y, levels = c("CSF", "SA", "wFA", "TBV", "WMh", "CT"))
 
 # think about an ROI plot on the brain. than also do a dot plot connected moving?
 
-
-plt2 <- ggplot(B6_results, aes(Y, logBF, shape = X))  +
+plt2 <- ggplot(m6Bayes_1SD, aes(Y, logBF, shape = X))  +
   geom_point(size = 4, color = "NA") +
-  ylim(-5, 5) +
+  ylim(-5.5, 5.5) +
   theme_classic(base_size = 20) +
-  annotate("rect", xmin = .5, xmax = 6.5, ymin = 4.6, ymax = 5, alpha = .8, fill = heatmaply::RdBu(10)[1]) + # extreme evidence
+  annotate("rect", xmin = .5, xmax = 6.5, ymin = 4.6, ymax = 5.5, alpha = .8, fill = heatmaply::RdBu(10)[1]) + # extreme evidence
   annotate("rect", xmin = .5, xmax = 6.5, ymin = 3.4, ymax = 4.6, alpha = .8, fill = heatmaply::RdBu(10)[2]) + # very strong
   annotate("rect", xmin = .5, xmax = 6.5, ymin = 2.3, ymax = 3.4, alpha = .8, fill = heatmaply::RdBu(10)[3]) + # strong
   annotate("rect", xmin = .5, xmax = 6.5, ymin = 1.1, ymax = 2.3, alpha = .8, fill = heatmaply::RdBu(10)[4]) + # substantial
@@ -343,23 +324,26 @@ plt2 <- ggplot(B6_results, aes(Y, logBF, shape = X))  +
   annotate("rect", xmin = .5, xmax = 6.5, ymin = -1.1, ymax = -2.3, alpha = .8, fill = heatmaply::RdBu(10)[7]) +
   annotate("rect", xmin = .5, xmax = 6.5, ymin = -2.3, ymax = -3.4, alpha = .8, fill = heatmaply::RdBu(10)[8]) +
   annotate("rect", xmin = .5, xmax = 6.5, ymin = -3.4, ymax = -4.6, alpha = .8, fill = heatmaply::RdBu(10)[9]) +
-  annotate("rect", xmin = .5, xmax = 6.5, ymin = -4.6, ymax = -5, alpha = .8, fill = heatmaply::RdBu(10)[10]) +
-  labs(x = "", y = "Bayes Factors (log)", shape = "Parameter") +
+  annotate("rect", xmin = .5, xmax = 6.5, ymin = -4.6, ymax = -5.5, alpha = .8, fill = heatmaply::RdBu(10)[10]) +
+  labs(x = "", y = "Bayes Factors", shape = "Parameter") +
   geom_point(size = 4) + # a hack to put them on top
-  scale_y_continuous(breaks=c(-4.6, -3.4, -2.3,-1, 0, 1, 2.3,3.4,4.6)) +
+  scale_y_continuous(breaks=c(-4.6, -3.4, -2.3,-1, 0, 1, 2.3,3.4,4.6), labels = c("-100", "-30", "-10", "-1", "0", "1", "10", "30", "100")) +
   scale_shape_manual(values = c(16,17)) + # http://www.sthda.com/english/wiki/ggplot2-point-shapes
   theme(axis.line=element_blank(), axis.ticks.y = element_blank(),
         axis.text.y = element_text(color = "black"),
         legend.text = element_text(size=12),
         legend.title = element_blank(),
-        legend.position = c(.955, .853),
+        legend.position = c(.954, .861),
+        legend.box.just = "center",
         legend.justification = c("right", "bottom"),
-        legend.box.just = "right",
-        legend.margin = margin(-7,6, 1, 1),
+        legend.margin = margin(0.5,6, 0.5, 1),
         legend.background = element_rect(colour = 'black', fill = 'white', linetype='solid', linewidth = .3)) +
   coord_flip() 
 
-ggsave("~/Google Drive/My Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/Fig2.png", plt2, width = 7, height = 5, bg = "white")
+plt2
+
+ggsave("~/Google Drive/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/plts/Fig2.png", 
+       plt2, width = 7, height = 5, bg = "white")
   
 
 
@@ -384,28 +368,6 @@ ggplot(sa_post, aes(1, posterior, fill = iv, color = iv)) +
   scale_color_brewer(palette = 'Dark2')
 
 
-# old code that isn't great
-# plt_path = "~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/"
-# modB1 %>% 
-#   map(~data.frame(iv_posterior = get_parameters(.)[,2], 
-#                   dv_name = rep(as.character(.$formula[2]), dim(get_parameters(.)[2])[1]),
-#                   iv_name = rep(names(get_parameters(.))[2], dim(get_parameters(.)[2])[1]))) %>% 
-#   map(~{ggplot(., aes(1, iv_posterior)) + 
-#       ggrain::geom_rain(point.args = list(alpha = .05)) + 
-#       theme_classic(base_size = 20) +
-#       labs(y = str_c("Effect of ", unique(.$iv_name), " on ", unique(.$dv_name)))}) %>% 
-#   map(~ggsave(str_c(plt_path, str_replace_all(.$labels$y, " ", "_"), ".png"), ., bg = "white"))
-
-
-
-
-
-
-
-
-
-
-
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 #### 3.5 Figure 3 NOT PreReged whole brain Bayes ####
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
@@ -423,7 +385,7 @@ saROI <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/proc/20240222_SAro
 f3_SA_DVs <- colnames(saROI)[as.logical(str_detect(colnames(saROI), "lh_") + str_detect(colnames(saROI), "rh_"))]
 f3_SA_IVs <- rep("ROSLA", length(f3_SA_DVs))
 
-f3_SAroi <- future_map2(f3_SA_DVs, f3_SA_IVs, \(y, x) bayesFIT(y, x, b6_covs, saROI),
+f3_SAroi <- future_map2(f3_SA_DVs, f3_SA_IVs, \(y, x) bayesFIT(y, x, b6_covs, saROI, BF_prior = normal(0, 1, autoscale = TRUE)),
                      .options = furrr_options(seed = T))
 
 # was crashing my comp with future_map_dfr & ~bayes_to_results
@@ -438,10 +400,15 @@ f3_SA_BFs <- tibble(
   label = roi_vec,
   bf = bf_vec)
 # this took FOREVER!!!
-data.table::fwrite(f3_SA_BFs, "/Volumes/home/lifespan/nicjud/UKB/proc/20240405_SAroiBFs.csv")
+data.table::fwrite(f3_SA_BFs, "/Volumes/home/lifespan/nicjud/UKB/proc/20240415_SAroiBFs.csv")
+
+f3_SA_BFs$bf_log <- f3_SA_BFs$bf
+
+f3_SA_BFs$bf[f3_SA_BFs$bf < 0] <- -1/exp(f3_SA_BFs$bf[f3_SA_BFs$bf < 0])
+f3_SA_BFs$bf[f3_SA_BFs$bf > 0] <- exp(f3_SA_BFs$bf[f3_SA_BFs$bf > 0])
 
 # now for the brain plt'n
-f3_SA_BFs$logBF <- rep(NA, length(f3_SA_BFs$bf))
+f3_SA_BFs$logBF <- rep(NA, length(f3_SA_BFs$bf_log))
 f3_SA_BFs$logBF[f3_SA_BFs$bf <= -4.6] <- "H0 extreme"
 f3_SA_BFs$logBF[f3_SA_BFs$bf <= -3.4 & f3_SA_BFs$bf >= -4.6] <- "H0 very strong"
 f3_SA_BFs$logBF[f3_SA_BFs$bf <= -2.3 & f3_SA_BFs$bf >= -3.4] <- "H0 strong"
@@ -501,13 +468,13 @@ plt_f3_SA_cont <- f3_SA_BFs %>%
   theme(legend.position="bottom",legend.direction = "horizontal", legend.box = "horizontal",
         legend.key.width = unit(2, "cm"),
         text = element_text(family = 'Arial')) +
-  scale_fill_gradient2(low = heatmaply::RdBu(10)[10], mid = "white", high = heatmaply::RdBu(10)[1],
-                       limits = c(-5.5,5.5), breaks=c(-4.6,-3.4, -2.3, -1, 1, 2.3, 3.4, 4.6),
-                       na.value = "white", name = "Strength of Evidence Log BF",
+  scale_fill_gradient2(low = heatmaply::RdBu(10)[9], mid = "white", high = heatmaply::RdBu(10)[2],
+                       limits = c(-40,40), breaks=c(-40,-30, -20, -10, 0,  10, 20, 30, 40),
+                       na.value = "white", name = "Strength of Evidence BF",
                        guide = guide_colorbar(title.position = "top", label.position = "bottom", 
                                               title.hjust = 0.5)) # centeres the color bar with text
 
-
+plt_f3_SA_cont
   
 ggsave("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/plts/SI_plt3_SA_cont.png",
        plt_f3_SA_cont, bg = "white", width = 8, height = 5)
