@@ -140,10 +140,10 @@ m1Bayes_1SD$ci_low <- stringi::stri_c("(", m1Bayes_1SD$ci_low, ", ", m1Bayes_1SD
 m1Bayes_1SD <- m1Bayes_1SD[,-6] # getting rid of high
 colnames(m1Bayes_1SD)[5] <- "CI" # renaming low
 
-m1Bayes_1SD %>% 
-  kbl(caption = "One Month Bandwidth Bayesian Analysis") %>%
-  kable_styling(full_width = F) %>% 
-  save_kable("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/localRand/20240414_1mBayes_correctPriors.html")
+# m1Bayes_1SD %>% 
+#   kbl(caption = "One Month Bandwidth Bayesian Analysis") %>%
+#   kable_styling(full_width = F) %>% 
+#   save_kable("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/localRand/20240414_1mBayes_correctPriors.html")
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 #### 3.3 1 month window diagnostics and plotting ####
@@ -310,6 +310,10 @@ m6Bayes_1SD$Y <- factor(m6Bayes_1SD$Y, levels = c("CSF", "SA", "wFA", "TBV", "WM
 
 # think about an ROI plot on the brain. than also do a dot plot connected moving?
 
+# shows how to do subscripts
+# axis_labels <- c(expression(paste('100\nBF'["01"])), expression("30\nBF"["01"]), expression("10\nBF"["01"]), expression("1\nBF"["01"]), expression("0\nBF"[" "]), 
+#                  expression("1\nBF"["10"]), expression("10\nBF"["10"]), expression("30\nBF"["10"]),expression("100\nBF"["10"]))
+
 plt2 <- ggplot(m6Bayes_1SD, aes(Y, logBF, shape = X))  +
   geom_point(size = 4, color = "NA") +
   ylim(-5.5, 5.5) +
@@ -325,12 +329,13 @@ plt2 <- ggplot(m6Bayes_1SD, aes(Y, logBF, shape = X))  +
   annotate("rect", xmin = .5, xmax = 6.5, ymin = -2.3, ymax = -3.4, alpha = .8, fill = heatmaply::RdBu(10)[8]) +
   annotate("rect", xmin = .5, xmax = 6.5, ymin = -3.4, ymax = -4.6, alpha = .8, fill = heatmaply::RdBu(10)[9]) +
   annotate("rect", xmin = .5, xmax = 6.5, ymin = -4.6, ymax = -5.5, alpha = .8, fill = heatmaply::RdBu(10)[10]) +
-  labs(x = "", y = "Bayes Factors", shape = "Parameter") +
+  labs(x = "", y = "", shape = "Parameter") + # "Bayes Factors"
   geom_point(size = 4) + # a hack to put them on top
-  scale_y_continuous(breaks=c(-4.6, -3.4, -2.3,-1, 0, 1, 2.3,3.4,4.6), labels = c("-100", "-30", "-10", "-1", "0", "1", "10", "30", "100")) +
+  scale_y_continuous(breaks=c(-4.6, -3.4, -2.3,-1, 0, 1, 2.3,3.4,4.6), labels = c("100", "30", "10", "1", "0", "1", "10", "30", "100")) + 
   scale_shape_manual(values = c(16,17)) + # http://www.sthda.com/english/wiki/ggplot2-point-shapes
   theme(axis.line=element_blank(), axis.ticks.y = element_blank(),
         axis.text.y = element_text(color = "black"),
+        # axis.text.x = element_text(angle= -30, vjust = 1.5, hjust=.5), # angle = 45,
         legend.text = element_text(size=12),
         legend.title = element_blank(),
         legend.position = c(.954, .861),
@@ -345,9 +350,6 @@ plt2
 ggsave("~/Google Drive/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/plts/Fig2.png", 
        plt2, width = 7, height = 5, bg = "white")
   
-
-
-
 
 
 # plotting the posterior of the IV's with rainclouds...
