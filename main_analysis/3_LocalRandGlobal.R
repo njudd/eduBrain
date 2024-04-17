@@ -407,7 +407,6 @@ f3_SA_BFs <- tibble(
 f3_SA_BFs <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/proc/20240415_SAroiBFs.csv")
 
 f3_SA_BFs$bf_log <- f3_SA_BFs$bf
-
 f3_SA_BFs$bf[f3_SA_BFs$bf < 0] <- -1/exp(f3_SA_BFs$bf[f3_SA_BFs$bf < 0])
 f3_SA_BFs$bf[f3_SA_BFs$bf > 0] <- exp(f3_SA_BFs$bf[f3_SA_BFs$bf > 0])
 
@@ -445,7 +444,6 @@ plt_f3_SA_cont <- f3_SA_BFs %>%
                        guide = guide_colorbar(title.position = "top", label.position = "bottom", 
                                               title.hjust = 0.5)) # centeres the color bar with text
 
-plt_f3_SA_cont
   
 # ggsave("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/plts/SI_plt3_SA_cont.png",
 #        plt_f3_SA_cont, bg = "white", width = 8, height = 5)
@@ -498,9 +496,13 @@ f3_CT_BFs <- tibble(
   label = roi_vec,
   bf = bf_vec)
 # this took FOREVER!!!
-data.table::fwrite(f3_CT_BFs, "/Volumes/home/lifespan/nicjud/UKB/proc/20240417_CTroiBFs.csv")
+# data.table::fwrite(f3_CT_BFs, "/Volumes/home/lifespan/nicjud/UKB/proc/20240417_CTroiBFs.csv")
 # f3_CT_BFs <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/proc/20240417_CTroiBFs.csv")
 
+
+f3_CT_BFs$bf_log <- f3_CT_BFs$bf
+f3_CT_BFs$bf[f3_CT_BFs$bf < 0] <- -1/exp(f3_CT_BFs$bf[f3_CT_BFs$bf < 0])
+f3_CT_BFs$bf[f3_CT_BFs$bf > 0] <- exp(f3_CT_BFs$bf[f3_CT_BFs$bf > 0])
 
 # making a contineous brain plt for CT 
 plt_f3_CT <- f3_CT_BFs %>%
@@ -515,11 +517,12 @@ plt_f3_CT <- f3_CT_BFs %>%
         text = element_text(family = 'Arial')) +
   scale_fill_gradient2(low = heatmaply::RdBu(10)[9], mid = "white", high = heatmaply::RdBu(10)[2],
                        limits = c(-40,40), breaks=c(-40,-30, -20, -10, 0,  10, 20, 30, 40), labels=c('40','30', '20', '10', '0',  '10', '20', '30', '40'),
-                       na.value = "white", name = "Surface Area Bayes Factors",
+                       na.value = "white", name = "Mean Cortical Thickness Bayes Factors",
                        guide = guide_colorbar(title.position = "top", label.position = "bottom", 
                                               title.hjust = 0.5)) # centeres the color bar with text
 
-
+# ggsave("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/plts/SI_plt2_CT.png",
+#        plt_f3_CT, bg = "white")
 
 
 
