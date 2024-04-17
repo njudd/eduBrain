@@ -285,12 +285,7 @@ TBVn <- TBVn[complete.cases(TBVn[, .(TBV_norm, running_var, EduAge16)]),][
 wFAs <- wFAs[complete.cases(wFAs[, .(wFA, running_var, EduAge16)]),][ 
   ,c("wFA", covs_fence) := lapply(.SD, vec_to_fence), .SDcols=c("wFA", covs_fence)]
 
-
-
-
-
-
-######### you should also state the amount of missing.
+#you should also state the amount of missing.
 
 # sa_imp <- MICE_imp(sa, n = 10)
 # ct_imp <- MICE_imp(ct, n = 10)
@@ -335,11 +330,6 @@ wFAs = wFAs[complete.cases(wFAs),]
 # RDHonest(SA | EduAge16 ~ running_var, data = sa)
 
 
-
-
-
-
-
 m1_sa_fuzzy = RDjacked("SA", "running_var", fuzzy = 'EduAge16', df = sa, covs = covs) #352 t2_FLAIR
 m2_ct_fuzzy = RDjacked("CT", "running_var", fuzzy = 'EduAge16', df = ct, covs = covs) #same as above
 m3_WMh_fuzzy = RDjacked("WM_hyper", "running_var", fuzzy = 'EduAge16', df = WMh, covs = covs[covs != "t2_FLAIR"]) # only 2 occassions
@@ -369,12 +359,6 @@ global_results %>% #saving the results
 #   kbl(caption = "Global neuroimaging results uncorrected") %>%
 #   kable_styling("hover", full_width = F) %>%
 #   save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/global_results_uY.html")
-
-
-
-
-
-
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 #### 1.3 plotting ####
@@ -422,9 +406,21 @@ SAplt <- sa %>%
                          labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
       ylim(c(164000, 176000)) +
       theme_minimal(base_size = 20) +
-      theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())
+      theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())}
 
-  }
+SAplt0 <- sa %>% 
+  group_by(running_var) %>% 
+  summarise(sa = mean(SA, na.rm = T), n =n()) %>% 
+  {ggplot(., aes(running_var, sa)) +
+      geom_point(color = "darkblue") +
+      geom_smooth(method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
+      labs(y = bquote('Total\nSurface Area'), x = "Date of Birth in Months") + # bquote('Total Surface Area'~(mm^3))
+      scale_x_continuous(breaks=c(-120,-60,0,60,120),
+                         labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
+      ylim(c(164000, 176000)) +
+      theme_minimal(base_size = 20) +
+      theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())}
+
 
 # cortical thickness
 CTplt <- ct %>% 
@@ -441,9 +437,20 @@ CTplt <- ct %>%
                          labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
       # ylim(c(164000, 176000)) +
       theme_minimal(base_size = 20) +
-      theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())
-    
-  }
+      theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())}
+
+CTplt0 <- ct %>% 
+  group_by(running_var) %>% 
+  summarise(ct = mean(CT, na.rm = T), n =n()) %>% 
+  {ggplot(., aes(running_var, ct)) +
+      geom_point(color = "darkblue") +
+      geom_smooth(method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
+      labs(y = 'Average Cortical\nThickness', x = "Date of Birth in Months") +
+      scale_x_continuous(breaks=c(-120,-60,0,60,120),
+                         labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
+      # ylim(c(164000, 176000)) +
+      theme_minimal(base_size = 20) +
+      theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())}
  
 # WMh
 WMhplt <- WMh %>% 
@@ -460,9 +467,7 @@ WMhplt <- WMh %>%
                          labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
       # ylim(c(164000, 176000)) +
       theme_minimal(base_size = 15) +
-      theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())
-    
-  }
+      theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())}
 
 # CSF
 CSFnplt <- CSFn %>% 
@@ -479,9 +484,7 @@ CSFnplt <- CSFn %>%
                          labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
       # ylim(c(164000, 176000)) +
       theme_minimal(base_size = 15) +
-      theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())
-    
-  }
+      theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())}
 
 # TBV
 TBVnplt <- TBVn %>% 
@@ -498,9 +501,19 @@ TBVnplt <- TBVn %>%
                          labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
       # ylim(c(164000, 176000)) +
       theme_minimal(base_size = 20) +
-      theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())
-    
-  }
+      theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())}
+
+TBVnplt0 <- TBVn %>% 
+  group_by(running_var) %>% 
+  summarise(TBV_norm = mean(TBV_norm, na.rm = T), n =n()) %>% 
+  {ggplot(., aes(running_var, TBV_norm)) +
+      geom_point(color = "darkblue") +
+      geom_smooth(method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
+      labs(y = 'Total Brain\nVolumne', x = "Date of Birth in Months") +
+      scale_x_continuous(breaks=c(-120,-60,0,60,120),
+                         labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
+      theme_minimal(base_size = 20) +
+      theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())}
 
 
 # wFA
@@ -519,10 +532,20 @@ wFAplt <- wFAs %>%
       scale_y_continuous(breaks=c(.440, .445, .450)) + #.442,.444, .446, .448
       # ylim(c(164000, 176000)) +
       theme_minimal(base_size = 20) +
-      theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())
-    
-  }
+      theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())}
 
+wFAplt0 <- wFAs %>% 
+  group_by(running_var) %>% 
+  summarise(wFA = mean(wFA, na.rm = T), n =n()) %>% 
+  {ggplot(., aes(running_var, wFA)) +
+      geom_point(color = "darkblue") +
+      geom_smooth(method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
+      labs(y = bquote('Weighted\nFractional Anisotropy'), x = "Date of Birth in Months") +
+      scale_x_continuous(breaks=c(-120,-60,0,60,120),
+                         labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
+      scale_y_continuous(breaks=c(.440, .445, .450)) + #.442,.444, .446, .448
+      theme_minimal(base_size = 20) +
+      theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())}
 
 SAplt + CSFnplt + CTplt + WMhplt + TBVnplt + wFAplt + 
   plot_annotation(tag_levels = 'a')
@@ -534,12 +557,17 @@ SAplt +  CTplt + TBVnplt + wFAplt +
 # did base size 20
 # ggsave("~/Google Drive/My Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/Fig1_4.png", width = 16, height = 9)
 
+# plots without RD effect
+SAplt0 +  CTplt0 + TBVnplt0 + wFAplt0 + 
+  plot_annotation(tag_levels = 'a')
+# did base size 20
+ggsave("~/Google Drive/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/plts/Fig1_4_0Blank.png", width = 16, height = 9)
+
+
 CSFnplt / WMhplt + 
   plot_annotation(tag_levels = 'a')
 
 # ggsave("~/Google Drive/My Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/SIfig2.png", width = 10, height = 8)
-
-
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 #### 1.5 Assumptions - Checking the RD design #### 
