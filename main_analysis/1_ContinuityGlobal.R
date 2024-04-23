@@ -413,7 +413,7 @@ SAplt0 <- sa %>%
   summarise(sa = mean(SA, na.rm = T), n =n()) %>% 
   {ggplot(., aes(running_var, sa)) +
       geom_point(color = "darkblue") +
-      geom_smooth(method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
+      # geom_smooth(method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
       labs(y = bquote('Total\nSurface Area'), x = "Date of Birth in Months") + # bquote('Total Surface Area'~(mm^3))
       scale_x_continuous(breaks=c(-120,-60,0,60,120),
                          labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
@@ -444,7 +444,7 @@ CTplt0 <- ct %>%
   summarise(ct = mean(CT, na.rm = T), n =n()) %>% 
   {ggplot(., aes(running_var, ct)) +
       geom_point(color = "darkblue") +
-      geom_smooth(method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
+      # geom_smooth(method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
       labs(y = 'Average Cortical\nThickness', x = "Date of Birth in Months") +
       scale_x_continuous(breaks=c(-120,-60,0,60,120),
                          labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
@@ -469,6 +469,18 @@ WMhplt <- WMh %>%
       theme_minimal(base_size = 15) +
       theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())}
 
+WMhplt0 <- WMh %>% 
+  group_by(running_var) %>% 
+  summarise(WM_hyper = mean(WM_hyper, na.rm = T), n =n()) %>% 
+  {ggplot(., aes(running_var, WM_hyper)) +
+      geom_point(color = "darkblue") +
+      labs(y = 'White Matter\nHyperintensities', x = "Date of Birth in Months") +
+      scale_x_continuous(breaks=c(-120,-60,0,60,120),
+                         labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
+      theme_minimal(base_size = 20) +
+      theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())}
+
+
 # CSF
 CSFnplt <- CSFn %>% 
   group_by(running_var) %>% 
@@ -484,6 +496,17 @@ CSFnplt <- CSFn %>%
                          labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
       # ylim(c(164000, 176000)) +
       theme_minimal(base_size = 15) +
+      theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())}
+
+CSFnplt0 <- CSFn %>% 
+  group_by(running_var) %>% 
+  summarise(CSF_norm = mean(CSF_norm, na.rm = T), n =n()) %>% 
+  {ggplot(., aes(running_var, CSF_norm)) +
+      geom_point(color = "darkblue") +
+      labs(y = "Cerebrospinal\nFluid Volume", x = "Date of Birth in Months") + #this is in ml's
+      scale_x_continuous(breaks=c(-120,-60,0,60,120),
+                         labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
+      theme_minimal(base_size = 20) +
       theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())}
 
 # TBV
@@ -508,7 +531,7 @@ TBVnplt0 <- TBVn %>%
   summarise(TBV_norm = mean(TBV_norm, na.rm = T), n =n()) %>% 
   {ggplot(., aes(running_var, TBV_norm)) +
       geom_point(color = "darkblue") +
-      geom_smooth(method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
+      # geom_smooth(method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
       labs(y = 'Total Brain\nVolumne', x = "Date of Birth in Months") +
       scale_x_continuous(breaks=c(-120,-60,0,60,120),
                          labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
@@ -539,7 +562,7 @@ wFAplt0 <- wFAs %>%
   summarise(wFA = mean(wFA, na.rm = T), n =n()) %>% 
   {ggplot(., aes(running_var, wFA)) +
       geom_point(color = "darkblue") +
-      geom_smooth(method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
+      # geom_smooth(method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
       labs(y = bquote('Weighted\nFractional Anisotropy'), x = "Date of Birth in Months") +
       scale_x_continuous(breaks=c(-120,-60,0,60,120),
                          labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
@@ -558,10 +581,10 @@ SAplt +  CTplt + TBVnplt + wFAplt +
 # ggsave("~/Google Drive/My Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/Fig1_4.png", width = 16, height = 9)
 
 # plots without RD effect
-SAplt0 +  CTplt0 + TBVnplt0 + wFAplt0 + 
+SAplt0 + CSFnplt0 + CTplt0 + WMhplt0 + TBVnplt0 + wFAplt0 + 
   plot_annotation(tag_levels = 'a')
 # did base size 20
-ggsave("~/Google Drive/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/plts/Fig1_4_0Blank.png", width = 16, height = 9)
+ggsave("~/Google Drive/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/plts/Fig1_6_0Blank.png", width = 20, height = 8)
 
 
 CSFnplt / WMhplt + 
