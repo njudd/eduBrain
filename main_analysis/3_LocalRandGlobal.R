@@ -448,7 +448,10 @@ plt_f3_SA_cont <- f3_SA_BFs %>%
 # ggsave("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/plts/SI_plt3_SA_cont.png",
 #        plt_f3_SA_cont, bg = "white", width = 8, height = 5)
 
-
+# missing one region the temporal pole; went back & checked raw data it is missing from the UKB
+# included_regions <- fread("/Volumes/home/lifespan/nicjud/UKB/proc/20240222_SAroi.csv")
+# included_regions <- colnames(included_regions)[34:99]
+# dk$data$label[!dk$data$label %in% included_regions]
 
 ##### STOPPING NOT RUNNING FOR OTHER MODALITIES
 
