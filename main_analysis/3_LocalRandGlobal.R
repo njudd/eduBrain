@@ -77,6 +77,9 @@ b1 <- fullset[running_var %in% c(-1,0)][
 # was not possible for the following covs due to no variance
 b1_covs <- covs[!covs %in% c("summer", "t2_FLAIR", "imaging_center_11028")]
 
+# you accidently summed the two hemispheres
+# b1$CT <- b1$CT/2
+
 # first we need to establish that there are more likely in this narrow window to stay until 16
 # First, we established that subjects within this one month window where more likely to stay in school, confirming our instrument.
 
@@ -113,6 +116,19 @@ IVs <- rep(c("ROSLA", "EduAge"), 6)
 # 
 # Cheers,
 # E.J.
+
+# 2023-05-07 doing std of the DV's since some people might want to know that
+b1 <- b1[,(str_c(unique(DVs), ".s")) := lapply(.SD, function(x) as.numeric(scale(x))), .SDcols=unique(DVs)]
+
+b1$EduAge <- as.numeric(scale(b1$EduAge))
+
+modB1_1sd_STD <- future_map2(str_c(DVs, ".s"), IVs, \(y, x) bayesFIT(y, x, b1_covs, b1,BF_prior = normal(location = 0, scale = 1, autoscale = TRUE)), .options = furrr_options(seed = T))
+m1Bayes_1SD_STD <- modB1_1sd_STD %>%
+  future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) %>%
+  kbl(caption = "One Month Bandwidth Bayesian Analysis (STD)") %>%
+  kable_styling(full_width = F) %>%
+  save_kable("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/localRand/20240507_1mBayes_correctPriors_STD.html")
+
 
 
 # 1 SD scalled priors
@@ -220,6 +236,33 @@ b6 <- fullset[running_var %in% c(-5:4)][
 covs[!covs %in% b1_covs]
 # table(b6$imaging_center_11028) # this is doable...
 b6_covs <- c(b1_covs, "imaging_center_11028")
+
+# 2023-05-07 doing std of the DV's since some people might want to know that
+b6 <- b6[,(str_c(unique(DVs), ".s")) := lapply(.SD, function(x) as.numeric(scale(x))), .SDcols=unique(DVs)]
+b6$EduAge <- as.numeric(scale(b6$EduAge))
+
+m6_1sd_STD <- future_map2(str_c(DVs, ".s"), IVs, \(y, x) bayesFIT(y, x, b6_covs, b6, BF_prior = normal(location = 0, scale = 1, autoscale = TRUE)), .options = furrr_options(seed = T))
+m6Bayes_1SD_STD <- m6_1sd_STD %>%
+  future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T)) %>%
+  kbl(caption = "Six Month Bandwidth Bayesian Analysis (STD)") %>%
+  kable_styling(full_width = F) %>%
+  save_kable("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/localRand/20240507_5mBayes_correctPriors_STD.html")
+
+b6$headmotion <- as.numeric(scale(b6$headmotion))
+b6$visit_day_correct <- as.numeric(scale(b6$visit_day_correct))
+b6$visit_day_correct2 <- as.numeric(scale(b6$visit_day_correct2))
+
+b6$EduAge <- as.numeric(scale(b6$EduAge))
+
+m6_1sd_STD_someCOVstd <- future_map2(str_c(DVs, ".s"), IVs, \(y, x) bayesFIT(y, x, b6_covs, b6, BF_prior = normal(location = 0, scale = 1, autoscale = TRUE)), .options = furrr_options(seed = T))
+
+m6_1sd_STD[[1]]$coefficients;c("line");m6_1sd_STD_someCOVstd[[1]]$coefficients
+
+m6_1sd_STD_someCOVstd[[6]]$coefficients
+m6_1sd_STD_someCOVstd[[2]]$coefficients
+
+# you accidently summed the two hemispheres
+# b6$CT <- b6$CT/2
 
 # 1 SD scalled priors
 m6_1sd <- future_map2(DVs, IVs, \(y, x) bayesFIT(y, x, b6_covs, b6, BF_prior = normal(location = 0, scale = 1, autoscale = TRUE)), .options = furrr_options(seed = T))
