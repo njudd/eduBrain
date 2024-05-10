@@ -32,7 +32,19 @@ source("~/projects/roslaUKB/main_analysis/0_functions.R")
 # function: vec_to_fence() takes a vector and puts outliers to the fence (i.e., boxplot.stats)
 # function: RDjacked() for cov corrected fuzzy RD
 
-pacman::p_load(tidyverse, lubridate, stringr, RDHonest, fastDummies, mice, ggseg, kableExtra, rddensity, patchwork, ggrain)
+pacman::p_load(tidyverse, lubridate, stringr, fastDummies, mice, ggseg, kableExtra, rddensity, patchwork, ggrain)
+
+# the RDHonest package added covariates, we will use an old verion from commit aa616f4 where p-vals were added
+# this is because we preregisterd, otherwise the new version with automatic covariate correction is prefered
+## new RD package with covs SA | EduAge16 ~ running_var | covs  
+# packageVersion("RDHonest") # 0.4.1 -----> 0.9
+# 
+# RDHonest(SA | EduAge16 ~ running_var, data = sa)
+
+devtools::install_github("kolesarm/RDHonest@aa616f4", auth_token = auth)
+
+
+
 
 ##### ##### ##### ##### 
 ##### helpful code!!!
@@ -184,6 +196,9 @@ fullset <- wFA[fullset, on ="eid"]
 # data.table::fwrite(fullset, "/Volumes/home/lifespan/nicjud/UKB/proc/20240223_fullset.csv")
 # fullset <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/proc/20240223_fullset.csv")
 
+
+fullset$CT <- fullset$CT/2 # you summed the hemisphere's for CT, when you want average CT
+
 # getting the time between ROSLA & scanning :) for neuroimaging peeepz
 scanage <- fullset[!is.na(visit_date),]
 
@@ -322,14 +337,6 @@ CSFn = CSFn[complete.cases(CSFn),] #33634 to 32102
 TBVn = TBVn[complete.cases(TBVn),] #33634 to 32102
 wFAs = wFAs[complete.cases(wFAs),]
 
-
-
-## new RD package with covs SA | EduAge16 ~ running_var | covs  
-# packageVersion("RDHonest") # 0.4.1 -----> 0.9
-# 
-# RDHonest(SA | EduAge16 ~ running_var, data = sa)
-
-
 m1_sa_fuzzy = RDjacked("SA", "running_var", fuzzy = 'EduAge16', df = sa, covs = covs) #352 t2_FLAIR
 m2_ct_fuzzy = RDjacked("CT", "running_var", fuzzy = 'EduAge16', df = ct, covs = covs) #same as above
 m3_WMh_fuzzy = RDjacked("WM_hyper", "running_var", fuzzy = 'EduAge16', df = WMh, covs = covs[covs != "t2_FLAIR"]) # only 2 occassions
@@ -339,10 +346,10 @@ m6_wFA_fuzzy = RDjacked("wFA", "running_var", fuzzy = 'EduAge16', df = wFAs, cov
 
 global_results <- rbind(m1_sa_fuzzy, m2_ct_fuzzy, m3_WMh_fuzzy, m4_CSFn_fuzzy, m5_TBVn_fuzzy, m6_wFA_fuzzy)
 
-global_results %>% #saving the results
-  kbl(caption = "Global neuroimaging results") %>%
-  kable_styling("hover", full_width = F) %>%
-  save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/global_results.html")
+# global_results %>% #saving the results
+#   kbl(caption = "Global neuroimaging results") %>%
+#   kable_styling("hover", full_width = F) %>%
+#   save_kable("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/global_results.html")
 
 # making a table without covs
 
@@ -401,9 +408,12 @@ SAplt <- sa %>%
       geom_vline(xintercept = 0,linetype="dashed") +
       geom_smooth(data=subset(., running_var < 0), method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
       geom_smooth(data=subset(., running_var > 0), method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
-      labs(y = bquote('Total\nSurface Area'), x = "Date of Birth in Months") + # bquote('Total Surface Area'~(mm^3))
+      labs(y = expression("Total Surface Area mm" ^2 ~ ""), x = "Date of Birth in Months") + # bquote('Total Surface Area'~(mm^3))
       scale_x_continuous(breaks=c(-120,-60,0,60,120),
                          labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
+      # scale_y_continuous(breaks=c(164000, 168000, 172000, 176000),
+      #                    labels=c(expression("164000" ^mm2 ~ ""), "Sept.\n1952", "Sept.\n1957", "Sept.\n1962"),
+      #                    limits = c(164000, 176000))+ 
       ylim(c(164000, 176000)) +
       theme_minimal(base_size = 20) +
       theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())}
@@ -432,7 +442,7 @@ CTplt <- ct %>%
       geom_vline(xintercept = 0,linetype="dashed") +
       geom_smooth(data=subset(., running_var < 0), method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
       geom_smooth(data=subset(., running_var > 0), method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
-      labs(y = 'Average Cortical\nThickness', x = "Date of Birth in Months") +
+      labs(y = 'Average Cortical\nThickness mm', x = "Date of Birth in Months") +
       scale_x_continuous(breaks=c(-120,-60,0,60,120),
                          labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
       # ylim(c(164000, 176000)) +
@@ -519,7 +529,7 @@ TBVnplt <- TBVn %>%
       geom_vline(xintercept = 0,linetype="dashed") +
       geom_smooth(data=subset(., running_var < 0), method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
       geom_smooth(data=subset(., running_var > 0), method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
-      labs(y = 'Total Brain\nVolumne', x = "Date of Birth in Months") +
+      labs(y = expression("Total Brain Volume mm" ^3 ~ ""), x = "Date of Birth in Months") +
       scale_x_continuous(breaks=c(-120,-60,0,60,120),
                          labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
       # ylim(c(164000, 176000)) +
@@ -532,7 +542,7 @@ TBVnplt0 <- TBVn %>%
   {ggplot(., aes(running_var, TBV_norm)) +
       geom_point(color = "darkblue") +
       # geom_smooth(method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
-      labs(y = 'Total Brain\nVolumne', x = "Date of Birth in Months") +
+      labs(y = 'Total Brain\nVolume', x = "Date of Birth in Months") +
       scale_x_continuous(breaks=c(-120,-60,0,60,120),
                          labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
       theme_minimal(base_size = 20) +
@@ -578,7 +588,7 @@ SAplt + CSFnplt + CTplt + WMhplt + TBVnplt + wFAplt +
 SAplt +  CTplt + TBVnplt + wFAplt + 
   plot_annotation(tag_levels = 'a')
 # did base size 20
-# ggsave("~/Google Drive/My Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/Fig1_4.png", width = 16, height = 9)
+ggsave("~/Google Drive/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/plts/Fig1_4_take2.png", width = 16, height = 9)
 
 # plots without RD effect
 SAplt0 + CSFnplt0 + CTplt0 + WMhplt0 + TBVnplt0 + wFAplt0 + 
