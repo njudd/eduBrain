@@ -12,10 +12,8 @@
 #### ### ----------------- ### ####
 
 
-### worknotes
-# check *'s
-
-# I just read straight off a copy of /phenotypes/current. these are already funpacked, 
+# UKB: I just read straight off a copy of /phenotypes/current in the Donders server. 
+# These are already funpacked, 
 # I doublechecked using the command line fmrib-unpack
 
 
@@ -43,9 +41,6 @@ pacman::p_load(tidyverse, lubridate, stringr, fastDummies, mice, ggseg, kableExt
 
 devtools::install_github("kolesarm/RDHonest@aa616f4", auth_token = auth)
 
-
-
-
 ##### ##### ##### ##### 
 ##### helpful code!!!
 ##### ##### ##### ##### 
@@ -59,7 +54,7 @@ devtools::install_github("kolesarm/RDHonest@aa616f4", auth_token = auth)
 
 
 # ukb <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/raw/current/31_brain_IDPs.csv")
-witte_vars <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/raw/N.Judd_2024_02_06.csv") # he said he doesn't have 196 & 24419
+witte_vars <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/raw/N.Judd_2024_02_06.csv") # he (Ward.deWitte radboudumc.nl) said he doesn't have 196 & 24419
 witte_UK_headmotion <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/raw/N.Judd_2024_02_23.csv") # he said he doesn't have 196 & 24419
 
 
@@ -185,17 +180,12 @@ fullset$summer <- as.numeric(fullset$month %in% c(7,8)) # (July + Aug)
 fullset$SA <- fullset$lSA + fullset$rSA
 fullset$CT <- fullset$lCT + fullset$rCT
 
-# this is the confounded analysis
-# summary(lm(SA ~ EduAge, data = fullset))
-# summary(lm(CT ~ EduAge, data = fullset))
-
 # adding mean global weighted FA (comes from 2_ContinuityROI.R)
 fullset <- wFA[fullset, on ="eid"]
 
 ### saving the result
 # data.table::fwrite(fullset, "/Volumes/home/lifespan/nicjud/UKB/proc/20240223_fullset.csv")
 # fullset <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/proc/20240223_fullset.csv")
-
 
 fullset$CT <- fullset$CT/2 # you summed the hemisphere's for CT, when you want average CT
 
@@ -269,10 +259,8 @@ cols = c("EduAge16", "running_var", covs)
 # ct <- ct[,(col_fence.s) := lapply(.SD, vec_to_fence), .SDcols=col_fence.s]
 
 
-# effect of covs
-
 dim(fullset)
-
+# effect of covs
 # summary(lm(paste(c("SA ~ acq_time", covs), collapse=" + "), data = fullset))
 # summary(lm(paste(c("CT ~ acq_time", covs), collapse=" + "), data = fullset))
 # summary(lm(paste(c("WM_hyper ~ acq_time", covs), collapse=" + "), data = fullset))
@@ -588,13 +576,13 @@ SAplt + CSFnplt + CTplt + WMhplt + TBVnplt + wFAplt +
 SAplt +  CTplt + TBVnplt + wFAplt + 
   plot_annotation(tag_levels = 'a')
 # did base size 20
-ggsave("~/Google Drive/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/plts/Fig1_4_take2.png", width = 16, height = 9)
+# ggsave("~/Google Drive/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/plts/Fig1_4_take2.png", width = 16, height = 9)
 
 # plots without RD effect
 SAplt0 + CSFnplt0 + CTplt0 + WMhplt0 + TBVnplt0 + wFAplt0 + 
   plot_annotation(tag_levels = 'a')
 # did base size 20
-ggsave("~/Google Drive/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/plts/Fig1_6_0Blank.png", width = 20, height = 8)
+# ggsave("~/Google Drive/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/plts/Fig1_6_0Blank.png", width = 20, height = 8)
 
 
 CSFnplt / WMhplt + 
@@ -645,6 +633,7 @@ covsT %>%
 
 
 # looking closer into summer, need to be donut holed removing running var 7,8,9,10 of 1957
+# summer is deterministically related to ROSLA for a 2 mnth window around the cutoff
 summer0 <- RDHonest(summer ~ EduAge16 | running_var, data = fullset[!is.na(fullset$visit_date),])
 summer1 <- RDHonest(summer ~ EduAge16 | running_var, data = fullset[!is.na(fullset$visit_date),], T0 = summer0$coefficients$estimate)
 
