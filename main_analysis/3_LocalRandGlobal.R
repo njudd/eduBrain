@@ -9,9 +9,12 @@
 # 3.3 1 month window plotting & diagnostics
 # 3.4 6 month window analysis
 # 3.5 6 month window plotting & diagnostics
-# 3.6 misc
+# 3.6 Bayesian Heat plot 5m window
+# 3.7 Whole Brain Bayes Factor plot (NOT PRE-REGISTERED)
 #### ### ----------------- ### ####
 
+
+# the 6 months is actually 5 (as preregistered) yet called 6 confusingly throughout the script
 
 #### notes
 # map & map2 are used a lot for parallelization; they are pretty much for loops with lists
@@ -297,7 +300,7 @@ m6Bayes_1SD %>%
 
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-#### 3.4 6 month window diagnostics and plotting ####
+#### 3.5 6 month window diagnostics and plotting ####
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 
 # first testing the covariates again in the 6mnth window...
@@ -333,6 +336,9 @@ m6Bayes_1SD %>%
 # ggplot(csf6_posterior, aes(posterior, group = effect)) +
 #   geom_density()
 
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+#### 3.6 Bayesian Heat plot 5m window ####
+### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 
 #### trying a plot to show evidence
 # you just want to show assosiational vs causal BFs
@@ -396,8 +402,6 @@ ggsave("~/Google Drive/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBa
 
 
 # plotting the posterior of the IV's with rainclouds...
-
-
 # you need to raincloud EduYears vs ROSLA...
 
 #### just manually extract them...
@@ -414,7 +418,7 @@ ggplot(sa_post, aes(1, posterior, fill = iv, color = iv)) +
 
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
-#### 3.5 Figure 3 NOT PreReged whole brain Bayes ####
+#### 3.7 Figure 3 NOT PreReged whole brain Bayes ####
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 
 # not taking any inference from this it is just meant to help visualize the null result
@@ -496,10 +500,6 @@ plt_f3_SA_cont <- f3_SA_BFs %>%
 # included_regions <- colnames(included_regions)[34:99]
 # dk$data$label[!dk$data$label %in% included_regions]
 
-##### STOPPING NOT RUNNING FOR OTHER MODALITIES
-
-
-
 # now for the brain plt'n
 # https://github.com/tidyverse/ggplot2/issues/5728
 # plt_f3_SA <- f3_SA_BFs %>%
@@ -519,224 +519,4 @@ plt_f3_SA_cont <- f3_SA_BFs %>%
 # 
 # ggsave("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/plts/SI_plt3_SA.png",
 #        plt_f3_SA, bg = "white")
-
-# now for CT
-rm(list = c("saROI", "f3_SAroi"))
-
-ctROI <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/proc/20240222_CTroi.csv")[
-  eid %in% b6$eid
-][
-  b6[, .(eid, headmotion, ROSLA)], on = "eid" # was missing from SA_roi
-]
-
-f3_CT_DVs <- colnames(ctROI)[as.logical(str_detect(colnames(ctROI), "lh_") + str_detect(colnames(ctROI), "rh_"))]
-f3_CT_IVs <- rep("ROSLA", length(f3_CT_DVs))
-
-f3_CTroi <- future_map2(f3_CT_DVs, f3_CT_IVs, \(y, x) bayesFIT(y, x, b6_covs, ctROI, BF_prior = normal(0, 1, autoscale = TRUE)),
-                        .options = furrr_options(seed = T))
-
-# was crashing my comp with future_map_dfr & ~bayes_to_results
-roi_vec <- c(); bf_vec <- c(); rhat_vec <- c() # empty vectors for loop
-for(m in 1:length(f3_CTroi)){
-  roi_vec <- c(roi_vec, as.character(f3_CTroi[[m]]$formula[2]))
-  bf_vec <- c(bf_vec, round(bayesfactor_parameters(f3_CTroi[[m]], null = 0)$log_BF[2], 2))
-  rhat_vec <- c(rhat_vec, as.numeric(rhat(f3_CTroi[[m]])[2]))
-} # there should be a way to paralize without running out of memory...
-
-f3_CT_BFs <- tibble(
-  label = roi_vec,
-  bf = bf_vec)
-# this took FOREVER!!!
-# data.table::fwrite(f3_CT_BFs, "/Volumes/home/lifespan/nicjud/UKB/proc/20240417_CTroiBFs.csv")
-# f3_CT_BFs <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/proc/20240417_CTroiBFs.csv")
-
-
-f3_CT_BFs$bf_log <- f3_CT_BFs$bf
-f3_CT_BFs$bf[f3_CT_BFs$bf < 0] <- -1/exp(f3_CT_BFs$bf[f3_CT_BFs$bf < 0])
-f3_CT_BFs$bf[f3_CT_BFs$bf > 0] <- exp(f3_CT_BFs$bf[f3_CT_BFs$bf > 0])
-
-# making a contineous brain plt for CT 
-plt_f3_CT <- f3_CT_BFs %>%
-  ggplot() +
-  geom_brain(atlas = dk, color = "black",
-             position = position_brain(side ~ hemi),
-             aes(fill = bf, color = bf),
-             show.legend = TRUE) +
-  theme_void() +
-  theme(legend.position="bottom",legend.direction = "horizontal", legend.box = "horizontal",
-        legend.key.width = unit(2, "cm"),
-        text = element_text(family = 'Arial')) +
-  scale_fill_gradient2(low = heatmaply::RdBu(10)[9], mid = "white", high = heatmaply::RdBu(10)[2],
-                       limits = c(-40,40), breaks=c(-40,-30, -20, -10, 0,  10, 20, 30, 40), labels=c('40','30', '20', '10', '0',  '10', '20', '30', '40'),
-                       na.value = "white", name = "Mean Cortical Thickness Bayes Factors",
-                       guide = guide_colorbar(title.position = "top", label.position = "bottom", 
-                                              title.hjust = 0.5)) # centeres the color bar with text
-
-# ggsave("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/plts/SI_plt2_CT.png",
-#        plt_f3_CT, bg = "white")
-
-
-
-# categorical plotting...
-# https://github.com/tidyverse/ggplot2/issues/5728
-# f3_CT_BFs$logBF <- rep(NA, length(f3_CT_BFs$bf))
-# f3_CT_BFs$logBF[f3_CT_BFs$bf <= -4.6] <- "H0 extreme"
-# f3_CT_BFs$logBF[f3_CT_BFs$bf <= -3.4 & f3_CT_BFs$bf >= -4.6] <- "H0 very strong"
-# f3_CT_BFs$logBF[f3_CT_BFs$bf <= -2.3 & f3_CT_BFs$bf >= -3.4] <- "H0 strong"
-# f3_CT_BFs$logBF[f3_CT_BFs$bf <= -1.1 & f3_CT_BFs$bf >= -2.3] <- "H0 substantial"
-# f3_CT_BFs$logBF[f3_CT_BFs$bf <= -1 & f3_CT_BFs$bf >= -1.1] <- "H0 anecdotal"
-# f3_CT_BFs$logBF[f3_CT_BFs$bf > -1] <- "No evidence"
-# 
-# f3_CT_BFs$logBF <- factor(f3_CT_BFs$logBF, levels = c("H1 extreme", "H1 very strong", "H1 strong", "H1 substantial", "H1 anecdotal", "no evidence",
-#                                                       "H0 anecdotal", "H0 substantial", "H0 strong", "H0 very strong", "H0 extreme"))
-# 
-# # now for the brain plt'n
-# plt_f3_CT <- f3_CT_BFs %>%
-#   ggplot() +
-#   geom_brain(atlas = dk, colour = "black",
-#              position = position_brain(side ~ hemi),
-#              aes(fill = logBF),
-#              show.legend = TRUE) +
-#   theme_void() +
-#   scale_fill_manual(values = c(heatmaply::RdBu(10)[1], heatmaply::RdBu(10)[2], heatmaply::RdBu(10)[3], heatmaply::RdBu(10)[4], heatmaply::RdBu(10)[5],
-#                                "white",
-#                                heatmaply::RdBu(10)[6], heatmaply::RdBu(10)[7], heatmaply::RdBu(10)[8], heatmaply::RdBu(10)[9], heatmaply::RdBu(10)[10]),
-#                     name="Strength of Evidence \nin Bayes Factors", labels=c("H1 extreme", "H1 very strong", "H1 strong", "H1 substantial", "H1 anecdotal", "No evidence",
-#                                             "H0 anecdotal", "H0 substantial", "H0 strong", "H0 very strong", "H0 extreme"), 
-#                     drop=FALSE,
-#                     na.value = "white", na.translate = F)
-# 
-# ggsave("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/plts/Plt3_CT.png",
-#        plt_f3_CT, bg = "white")
-
-# now for FA
-rm(list = c("ctROI", "f3_CTroi"))
-
-faROI <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/proc/20240222_wFAGLOBAL.csv")[
-  eid %in% b6$eid
-][
-  b6[, .(eid, headmotion, ROSLA)], on = "eid" # was missing from SA_roi
-]
-
-f3_FA_DVs <- colnames(faROI)[34:60]
-f3_FA_IVs <- rep("ROSLA", length(f3_FA_DVs))
-
-f3_FAroi <- future_map2(f3_FA_DVs, f3_FA_IVs, \(y, x) bayesFIT(y, x, b6_covs, faROI),
-                        .options = furrr_options(seed = T))
-
-# was crashing my comp with future_map_dfr & ~bayes_to_results
-roi_vec <- c(); bf_vec <- c(); rhat_vec <- c() # empty vectors for loop
-for(m in 1:length(f3_FAroi)){
-  roi_vec <- c(roi_vec, as.character(f3_FAroi[[m]]$formula[2]))
-  bf_vec <- c(bf_vec, round(bayesfactor_parameters(f3_FAroi[[m]], null = 0)$log_BF[2], 2))
-  rhat_vec <- c(rhat_vec, as.numeric(rhat(f3_FAroi[[m]])[2]))
-} # there should be a way to paralize without running out of memory...
-
-f3_FA_BFs <- tibble(
-  label = roi_vec,
-  bf = bf_vec)
-# this took FOREVER!!!
-data.table::fwrite(f3_FA_BFs, "/Volumes/home/lifespan/nicjud/UKB/proc/20240405_FAroiBFs.csv")
-
-
-# it is not this atlas so just ignore for now...
-# as.data.frame(tracula$data)[,1:4]
-# it is named differently....also dim(tracula$data) is 38...
-
-
-
-
-
-
-
-
-# f3_FA_BFs %>% 
-#   ggplot() +
-#   geom_brain(atlas = tracula, 
-#              #position = position_brain(hemi ~ side),
-#              aes(fill = logBF),
-#              show.legend = TRUE)
-# 
-# 
-# plot(tracula) +
-#   theme(legend.position = "bottom", 
-#         legend.text = element_text(size = 9)) +
-#   guides(fill = guide_legend(ncol = 3))
-
-
-
-# now for subcortical
-rm(list = c("faROI", "f3_FAroi"))
-
-sROI <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/proc/20240222_sROI.csv")[
-  eid %in% b6$eid
-][
-  b6[, .(eid, headmotion, ROSLA)], on = "eid" # was missing from SA_roi
-]
-
-f3_sub_DVs <- colnames(sROI)[as.logical(str_detect(colnames(sROI), "lh_") + str_detect(colnames(sROI), "rh_"))]
-f3_sub_IVs <- rep("ROSLA", length(f3_sub_DVs))
-
-f3_SUBroi <- future_map2(f3_sub_DVs, f3_sub_IVs, \(y, x) bayesFIT(y, x, b6_covs, sROI),
-                        .options = furrr_options(seed = T))
-
-# was crashing my comp with future_map_dfr & ~bayes_to_results
-roi_vec <- c(); bf_vec <- c(); rhat_vec <- c() # empty vectors for loop
-for(m in 1:length(f3_SUBroi)){
-  roi_vec <- c(roi_vec, as.character(f3_SUBroi[[m]]$formula[2]))
-  bf_vec <- c(bf_vec, round(bayesfactor_parameters(f3_SUBroi[[m]], null = 0)$log_BF[2], 2))
-  rhat_vec <- c(rhat_vec, as.numeric(rhat(f3_SUBroi[[m]])[2]))
-} # there should be a way to paralize without running out of memory...
-
-f3_SUB_BFs <- tibble(
-  label = roi_vec,
-  bf = bf_vec)
-# this took FOREVER!!!
-data.table::fwrite(f3_SUB_BFs, "/Volumes/home/lifespan/nicjud/UKB/proc/20240405_SUBroiBFs.csv")
-
-# making a df of the atlas to edit
-aseg_edit <- aseg$data
-# subsetting relevant regions
-aseg_edit <- aseg_edit[aseg_edit$hemi %in% c("left", "right"),]
-aseg_edit <- aseg_edit[!is.na(aseg_edit$label),]
-
-# trying to make a col similar to f3_SUB_BFs to merge by
-aseg_edit$hemi[aseg_edit$hemi == "left"] <- rep("lh_", length(aseg_edit$hemi[aseg_edit$hemi == "left"]))
-aseg_edit$hemi[aseg_edit$hemi == "right"] <- rep("rh_", length(aseg_edit$hemi[aseg_edit$hemi == "right"]))
-
-
-aseg_edit$hemi <- str_c(aseg_edit$hemi, str_remove(aseg_edit$region, " "))
-
-data.frame(aseg_edit$hemi, tolower(f3_SUB_BFs$label[-c(18,9)]))
-
-aseg_edit$hemi[!aseg_edit$hemi %in% tolower(f3_SUB_BFs$label[-c(18,9)])]
-
-
-f3_SUB_BFs$label <- tolower(f3_SUB_BFs$label)
-
-# reworking
-f3_SUB_BFs <- f3_SUB_BFs[,-3]
-colnames(f3_SUB_BFs)[1] <- "hemi"
-
-SUBplt_data <- left_join(data.frame(hemi = aseg_edit$hemi, label = aseg_edit$label), f3_SUB_BFs)
-
-colnames(SUBplt_data)[1] <- "NOThemi"
-
-SUBplt_data %>%
-  ggplot() +
-  geom_brain(atlas = aseg, 
-             #position = position_brain(hemi ~ side),
-             aes(fill = bf))
-
-ggplot() +
-  geom_brain(atlas = aseg)
-
-
-SUBplt_data %>%
-  ggplot() +
-  geom_brain(atlas = aseg, 
-             # position = position_brain(hemi ~ side),
-             aes(color = bf))
-
-
 
