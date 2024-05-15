@@ -13,10 +13,9 @@
 # 3.7 Whole Brain Bayes Factor plot (NOT PRE-REGISTERED)
 #### ### ----------------- ### ####
 
-
-# the 6 months is actually 5 (as preregistered) yet called 6 confusingly throughout the script
-
 #### notes
+# the 6 months is actually 5 (as preregistered) yet called 6 confusingly throughout the script
+# 
 # map & map2 are used a lot for parallelization; they are pretty much for loops with lists
 # map2 takes two lists (of equal lenght & itterates thru them in order)
 # https://data-se.netlify.app/2021/02/06/plotting-multiple-plots-using-purrr-map-and-ggplot/
