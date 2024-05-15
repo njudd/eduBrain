@@ -13,13 +13,10 @@
 #### ### ----------------- ### ####
 
 
-### worknotes
-# check *'s
-
-
+# FDR will make many p-vals the same
 # https://stackoverflow.com/questions/10323817/r-unexpected-results-from-p-adjust-fdr
 
-### ***FLAIR is removed due to to little obs
+### FLAIR (along with other covs) are removed if they have to little obs for modeling
 
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
@@ -105,7 +102,7 @@ SAroi <- SAroi[complete.cases(SAroi[, ..covs]),]
 
 # str(SAroi[, c(covs), with = FALSE])
 
-# **only two observations without T2 flair
+# only two observations without T2 flair
 # SAroi <- SAroi[t2_FLAIR ==1,]
 
 # x.10 saving output
@@ -336,14 +333,5 @@ SI_3.2 <- ggplot(largedf, aes(modality, p.value, fill = modality)) +
 SI_3 <- SI_3.1 / SI_3.2 + plot_annotation(tag_levels = 'a')
 
 # ggsave("~/My_Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/SI_3.png", SI_3, bg = "white", width = 14, height = 14)
-
-
-
-
-
-
-
-
-
 
 
