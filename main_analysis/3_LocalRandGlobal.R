@@ -519,3 +519,65 @@ plt_f3_SA_cont <- f3_SA_BFs %>%
 # ggsave("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/plts/SI_plt3_SA.png",
 #        plt_f3_SA, bg = "white")
 
+
+
+# do a robustness on the 5mnth window
+pacman::p_load(tidyverse, lubridate, stringr, RDHonest, fastDummies, mice, ggseg, anytime, kableExtra,
+               rstanarm, insight, bayestestR, furrr, bayesplot, ggseg, ggsegTracula)
+
+s08 <- c(-5:4) - 80
+s07 <- c(-5:4) - 70
+s06 <- c(-5:4) - 60
+s05 <- c(-5:4) - 50
+s04 <- c(-5:4) - 40
+s03 <- c(-5:4) - 30
+s02 <- c(-5:4) - 20
+s01 <- c(-5:4) - 10
+s1 <- c(-5:4)
+s11 <- c(-5:4) + 11
+s12 <- c(-5:4) + 11 + 10
+s13 <- c(-5:4) + 11 + 20
+s14 <- c(-5:4) + 11 + 30
+s15 <- c(-5:4) + 11 + 40
+s16 <- c(-5:4) + 11 + 50
+s17 <- c(-5:4) + 11 + 60
+s18 <- c(-5:4) + 11 + 70
+
+subsets <- list(s08, s07, s06, s05, s04, s03, s02, s01, s1, s11, s12, s13, s14, s15, s16, s17, s18)
+
+DVs2 <- rep(c("SA", "CT", "CSF_norm", "TBV_norm", "WM_hyper", "wFA"), each = length(subsets)) #amazing 
+
+# fullset <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/proc/20240223_fullset.csv")
+
+# scale DVs
+fullset <- fullset[,(str_c(unique(DVs2), ".s")) := lapply(.SD, function(x) as.numeric(scale(x))), .SDcols=unique(DVs2)]
+DVs2 <- str_c(DVs2, ".s") #amazing 
+
+EduRobust_mods_1sd <- future_map2(DVs2, subsets, \(y, x) bayesFIT(y, "EduAge", b6_covs, 
+                                                             fullset[running_var %in% as.numeric(x)],
+                                                    BF_prior = normal(location = 0, scale = 1, autoscale = TRUE)), .options = furrr_options(seed = T))
+
+
+
+
+m1Bayes_1SD <- modB1_1sd %>%
+  future_map_dfr(~bayes_to_results(list(.)), .options = furrr_options(seed = T))
+
+
+b1 <- fullset[running_var %in% c(-1,0)][
+  , ROSLA := running_var >= 0
+][
+  !is.na(visit_date) #must be an imaging subjects (visit date instance 2)
+]
+
+b6 <- fullset[running_var %in% c(-5:4)][
+  , ROSLA := running_var >= 0
+][
+  !is.na(visit_date) #must be an imaging subjects (visit date instance 2)
+]
+
+
+
+
+
+
