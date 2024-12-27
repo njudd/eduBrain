@@ -40,6 +40,8 @@ pacman::p_load(tidyverse, lubridate, stringr, fastDummies, mice, ggseg, kableExt
 # RDHonest(SA | EduAge16 ~ running_var, data = sa)
 
 devtools::install_github("kolesarm/RDHonest@aa616f4", auth_token = auth)
+# packageVersion("RDHonest") # make sure you are on 0.4.1
+library(RDHonest)
 
 ##### ##### ##### ##### 
 ##### helpful code!!!
@@ -201,21 +203,38 @@ scanage <- scanage[!nodata == 6] # CANNOT have all 6 missing
 
 scanage$DOB <- ym(str_c(scanage$year,"-", scanage$month))
 
-# ggplot(scanage, aes(1, DOB)) + ggrain::geom_rain(point.args = list(alpha = .01))
-
+# making a more complete SI Figure for reviewer 3
+# visit date
+SI_descpVisitDate <- ggplot(scanage, aes(1, visit_date)) +
+  geom_rain(point.args = list(alpha = .08), fill = "#d81b60",
+            point.args.pos = list(position = position_jitter(width = 0.06, height = 0, seed = 42))) +
+  theme_minimal(base_size = 25) +
+  labs(x = "", y = "Visit Date (Days)") +
+  theme(axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+#DOG
+SI_descpDOB <- ggplot(scanage, aes(1, DOB)) +
+  geom_rain(point.args = list(alpha = .08), fill = "#EC7063",
+            point.args.pos = list(position = position_jitter(width = 0.06, height = 0, seed = 42))) +
+  theme_minimal(base_size = 25) +
+  labs(x = "", y = "Date of Birth (Months)") +
+  theme(axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
 #age of scan
 scanage$AOS <- interval(scanage$DOB, scanage$visit_date) %/% months(1)/12
-# SI_descpAGEplt <- ggplot(scanage, aes(1, AOS)) + 
-#   geom_rain(point.args = list(alpha = .08), fill = "#EC7063",
-#                     point.args.pos = list(position = position_jitter(width = 0.06, height = 0, seed = 42))) +
-#   theme_minimal(base_size = 25) +
-#   labs(x = "", y = "Age at neuroimaging") +
-#   theme(axis.text.x=element_blank(),
-#         axis.ticks.x=element_blank()) +
-#   scale_y_continuous(breaks = c(50,55,60,65,70,75,80))
-# 
-# ggsave("~/Google Drive/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/plts/SI_FigScanAGE.png", 
-#        SI_descpAGEplt, bg = "white")
+SI_descpAOS <- ggplot(scanage, aes(1, AOS)) +
+  geom_rain(point.args = list(alpha = .08), fill = "#fdd835",
+                    point.args.pos = list(position = position_jitter(width = 0.06, height = 0, seed = 42))) +
+  theme_minimal(base_size = 25) +
+  labs(x = "", y = "Age at neuroimaging") +
+  theme(axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
+  scale_y_continuous(breaks = c(50,55,60,65,70,75,80))
+
+SI_Fig1 <- SI_descpVisitDate / SI_descpDOB / SI_descpAOS + plot_annotation(tag_level = "a")
+
+ggsave("~/Google Drive/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/10.02.01 ROLSA Brain/results/plts/SI_Fig1.png",
+       SI_Fig1, bg = "white", width = 10, height = 14)
 
 # looks normal take the mean
 mean(scanage$AOS) # 61.89 ~ 62
@@ -358,6 +377,30 @@ global_results <- rbind(m1_sa_fuzzy, m2_ct_fuzzy, m3_WMh_fuzzy, m4_CSFn_fuzzy, m
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 #### 1.3 plotting ####
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
+# Cont. RD plotting 
+telomere_plt <- telomere_set %>% 
+  group_by(running_var) %>% 
+  summarise(sa = mean(ltl, na.rm = T), n =n()) %>% 
+  {ggplot(., aes(running_var, sa)) +
+      geom_vline(xintercept = 0,linetype="dashed", size = 1) +
+      geom_point(color = "darkblue", alpha = .8, size = 3) +
+      # geom_point(data=subset(., running_var > -m1$coefficients$bandwidth & running_var < m1$coefficients$bandwidth), color = "darkblue", alpha = .8, size = 3) +
+      # geom_point(data=subset(., running_var < -m1$coefficients$bandwidth | running_var  > m1$coefficients$bandwidth), color = "blue", alpha = .3, size = 3) +
+      # geom_smooth(data=subset(., running_var > -m1$coefficients$bandwidth & running_var  < m1$coefficients$bandwidth), method='glm',formula=y~poly(x,1),se=F, color = "black",  size = 1.5) +
+      # geom_smooth(data=subset(., running_var > -m1$coefficients$bandwidth & running_var < 0), method='glm',formula=y~poly(x,1),se=F, color = "blue",  size = 1.5) +
+      # geom_smooth(data=subset(., running_var > 0 & running_var  < m1$coefficients$bandwidth), method='glm',formula=y~poly(x,1),se=F, color = "blue",  size = 1.5) +
+      labs(y = "Telomere Length\n(Std. monthly)", x = "Date of Birth in Months") + # bquote('Total Surface Area'~(mm^3))
+      scale_x_continuous(breaks=c(-120,-60,0,60,120),
+                         labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
+      # scale_y_continuous(breaks=c(164000, 168000, 172000, 176000),
+      #                    labels=c(expression("164000" ^mm2 ~ ""), "Sept.\n1952", "Sept.\n1957", "Sept.\n1962"),
+      #                    limits = c(164000, 176000))+ 
+      ylim(c(-.3, .3)) +
+      theme_minimal(base_size = 30) +
+      theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())}
+
+# ggsave("~/Google Drive/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/10.02.02 ROSLA Telomere/figs/Plt1.png",
+#        telomere_plt_linear, width = 14, height = 8, bg = "white")
 
 #moving plotting below so I can put the MSE derived bounds
 
@@ -374,7 +417,7 @@ Edu16plt <- fullset[!is.na(fullset$visit_date),] %>% #making sure it is imaging 
       # geom_point(data=subset(., running_var < -m1_sa_fuzzy$bandwidth | running_var  > m1_sa_fuzzy$bandwidth), color = "blue", alpha = .3) +
       geom_vline(xintercept = 0,linetype="dashed") +
       geom_smooth(data=subset(., running_var < 0), method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
-      geom_smooth(data=subset(., running_var < 0), method='glm',formula=y~poly(x,2),se=F, color = "darkgreen") +
+      # geom_smooth(data=subset(., running_var < 0), method='glm',formula=y~poly(x,2),se=F, color = "darkgreen") +
       geom_smooth(data=subset(., running_var > 0), method='glm',formula=y~poly(x,3),se=F, color = "darkred") +
       labs(y = bquote('Percent staying until 16'), x = "Date of Birth in Months") + # bquote('Total Surface Area'~(mm^3))
       scale_x_continuous(breaks=c(-120,-60,0,60,120),
@@ -383,7 +426,7 @@ Edu16plt <- fullset[!is.na(fullset$visit_date),] %>% #making sure it is imaging 
       theme_minimal(base_size = 20) +
       theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())
   }
-# ggsave("~/Google Drive/My Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/SI_Fig1.png", Edu16plt, width = 10, height = 8, bg = "white")
+# ggsave("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/10.02.01 ROLSA Brain/results/plts/SI_Fig2.png", Edu16plt, width = 10, height = 8, bg = "white")
 
 
 # surface area
@@ -464,7 +507,7 @@ WMhplt <- WMh %>%
       scale_x_continuous(breaks=c(-120,-60,0,60,120),
                          labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
       # ylim(c(164000, 176000)) +
-      theme_minimal(base_size = 15) +
+      theme_minimal(base_size = 20) +
       theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())}
 
 WMhplt0 <- WMh %>% 
@@ -493,7 +536,7 @@ CSFnplt <- CSFn %>%
       scale_x_continuous(breaks=c(-120,-60,0,60,120),
                          labels=c("Sept.\n1947", "Sept.\n1952", "Sept.\n1957", "Sept.\n1962", "Sept.\n1967")) +
       # ylim(c(164000, 176000)) +
-      theme_minimal(base_size = 15) +
+      theme_minimal(base_size = 20) +
       theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())}
 
 CSFnplt0 <- CSFn %>% 
@@ -568,27 +611,60 @@ wFAplt0 <- wFAs %>%
       theme_minimal(base_size = 20) +
       theme(axis.text.x= element_text(angle=45), axis.title.x = element_blank())}
 
-SAplt + CSFnplt + CTplt + WMhplt + TBVnplt + wFAplt + 
+(SAplt | CSFnplt) / (CTplt | WMhplt) / (TBVnplt | wFAplt) + 
   plot_annotation(tag_levels = 'a')
 
-# ggsave("~/Google Drive/My Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/Fig1.png")
+# ggsave("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/10.02.01 ROLSA Brain/results/plts/SI_Fig4.png", width = 13, height = 16, bg = "white")
+
+# removing the poly fits in perference for what I actually fit (local-linear RD) after reviewer comments
+# https://stackoverflow.com/questions/13407236/remove-a-layer-from-a-ggplot2-chart
+
+SAplt$layers <- SAplt$layers[1:3]
+SAplt <- SAplt +
+  geom_smooth(data=subset(SAplt$data,running_var > -m1_sa_fuzzy$bandwidth & running_var < 0), method='glm',formula=y~poly(x,1),se=T, color = "red",  size = 1.5) +
+  geom_smooth(data=subset(SAplt$data,running_var > 0 & running_var  < m1_sa_fuzzy$bandwidth), method='glm',formula=y~poly(x,1),se=T, color = "red",  size = 1.5)
+
+CTplt$layers <- CTplt$layers[1:3]
+CTplt <- CTplt +
+  geom_smooth(data=subset(CTplt$data, running_var > -m2_ct_fuzzy$bandwidth & running_var < 0), method='glm',formula=y~poly(x,1),se=T, color = "red",  size = 1) +
+  geom_smooth(data=subset(CTplt$data, running_var > 0 & running_var  < m2_ct_fuzzy$bandwidth), method='glm',formula=y~poly(x,1),se=T, color = "red",  size = 1)
+
+TBVnplt$layers <- TBVnplt$layers[1:3]
+TBVnplt <- TBVnplt +
+  geom_smooth(data=subset(TBVnplt$data, running_var > -m5_TBVn_fuzzy$bandwidth & running_var < 0), method='glm',formula=y~poly(x,1),se=T, color = "red",  size = 1) +
+  geom_smooth(data=subset(TBVnplt$data, running_var > 0 & running_var  < m5_TBVn_fuzzy$bandwidth), method='glm',formula=y~poly(x,1),se=T, color = "red",  size = 1)
+
+wFAplt$layers <- wFAplt$layers[1:3]
+wFAplt <- wFAplt +
+  geom_smooth(data=subset(wFAplt$data, running_var > -m6_wFA_fuzzy$bandwidth & running_var < 0), method='glm',formula=y~poly(x,1),se=T, color = "red",  size = 1) +
+  geom_smooth(data=subset(wFAplt$data, running_var > 0 & running_var  < m6_wFA_fuzzy$bandwidth), method='glm',formula=y~poly(x,1),se=T, color = "red",  size = 1)
+
 
 SAplt +  CTplt + TBVnplt + wFAplt + 
   plot_annotation(tag_levels = 'a')
 # did base size 20
-# ggsave("~/Google Drive/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/plts/Fig1_4_take2.png", width = 16, height = 9)
+ggsave("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/10.02.01 ROLSA Brain/results/plts/Fig1.png", width = 16, height = 9, bg = "white")
 
 # plots without RD effect
-SAplt0 + CSFnplt0 + CTplt0 + WMhplt0 + TBVnplt0 + wFAplt0 + 
-  plot_annotation(tag_levels = 'a')
+# SAplt0 + CSFnplt0 + CTplt0 + WMhplt0 + TBVnplt0 + wFAplt0 + 
+#   plot_annotation(tag_levels = 'a')
 # did base size 20
 # ggsave("~/Google Drive/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/results/plts/Fig1_6_0Blank.png", width = 20, height = 8)
 
+CSFnplt$layers <- CSFnplt$layers[1:3]
+CSFnplt <- CSFnplt +
+  geom_smooth(data=subset(CSFnplt$data, running_var > -m4_CSFn_fuzzy$bandwidth & running_var < 0), method='glm',formula=y~poly(x,1),se=F, color = "red",  size = 1) +
+  geom_smooth(data=subset(CSFnplt$data, running_var > 0 & running_var  < m4_CSFn_fuzzy$bandwidth), method='glm',formula=y~poly(x,1),se=F, color = "red",  size = 1)
+
+WMhplt$layers <- WMhplt$layers[1:3]
+WMhplt <- WMhplt +
+  geom_smooth(data=subset(WMhplt$data, running_var > -m3_WMh_fuzzy$bandwidth & running_var < 0), method='glm',formula=y~poly(x,1),se=F, color = "red",  size = 1) +
+  geom_smooth(data=subset(WMhplt$data, running_var > 0 & running_var  < m3_WMh_fuzzy$bandwidth), method='glm',formula=y~poly(x,1),se=F, color = "red",  size = 1)
 
 CSFnplt / WMhplt + 
   plot_annotation(tag_levels = 'a')
 
-# ggsave("~/Google Drive/My Drive/life/10 Projects/10.02 ROSLA UK BioBank/results/plts/SIfig2.png", width = 10, height = 8)
+# ggsave("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/10.02.01 ROLSA Brain/results/plts/SI_Fig3.png", width = 10, height = 8)
 
 ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ### ###
 #### 1.5 Assumptions - Checking the RD design #### 
