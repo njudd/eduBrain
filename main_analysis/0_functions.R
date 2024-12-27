@@ -9,11 +9,21 @@
 
 if (!require("pacman")) install.packages("pacman")
 pacman::p_load(mice)
-pacman::p_load_gh("kolesarm/RDHonest")
 
 # adapted from github
 # https://github.com/kolesarm/RDHonest/issues/7
 # NOTE! Issues in his lm subsetting bounds; only subseting one side of the bounds
+
+# the RDHonest package added covariates, 
+# we will use an old verion from commit aa616f4 where p-vals were added
+# this is because we preregisterd, otherwise the new version with automatic covariate correction is prefered
+## new RD package with covs SA | EduAge16 ~ running_var | covs  
+# packageVersion("RDHonest") # 0.4.1 -----> 0.9
+# 
+# RDHonest(SA | EduAge16 ~ running_var, data = sa)
+
+# you need to make an auth token on github.com
+# devtools::install_github("kolesarm/RDHonest@aa616f4", auth_token = auth)
 
 
 
@@ -28,6 +38,7 @@ vec_to_fence <- function(vec){
 
 
 # fuzzy RD with covs corrected
+# this is an outdated approach, use the new version of the package!!!
 RDjacked <- function(y, running, fuzzy, df, covs = NULL, report_efficiancy = FALSE) {
   
   print("Only handles fuzzy RD atm; no missingness")
@@ -210,7 +221,6 @@ RDjacked <- function(y, running, fuzzy, df, covs = NULL, report_efficiancy = FAL
 
 
 # MICE function
-
 MICE_imp <- function(df, n = 5) {
   
   ini <- mice(df, maxit=0, print=F)
@@ -302,6 +312,89 @@ bayes_to_results <- function(listofMODs){
   df <- data.frame(Y, X, effobs, binsize, median, logBF, BF, ci_low, ci_high) #, median, ci95, logBF)
   return(df)
 }
+
+
+#### reviewer plots
+# Define the sequence of x values
+x <- seq(-10, 10, length.out = 1000)
+
+# Compute the densities for the distributions
+y_normal_.5 <- dnorm(x, mean = 0, sd = .5)
+y_normal_1 <- dnorm(x, mean = 0, sd = 1)
+y_normal_1.5 <- dnorm(x, mean = 0, sd = 1.5)
+y_normal_2 <- dnorm(x, mean = 0, sd = 2.5)
+y_cauchy <- dcauchy(x, location = 0, scale = 0.7)
+
+# Plot the Normal prior with SD = 1
+plot(x, y_normal_.5, type = "l", lwd = 2, col = "#3949ab",
+     xlab = "x", ylab = "Density",
+     main = "Normal and Cauchy Priors")
+
+# Add the Normal prior with SD = .5
+lines(x, y_normal_1, lwd = 2, col = "#1e88e5")
+
+# Add the Normal prior with SD = 1.5
+lines(x, y_normal_1.5, lwd = 2, col = "#00acc1")
+
+
+# Add the Normal prior with SD = 2.5
+lines(x, y_normal_2, lwd = 2, col = "#ff5722")
+
+# Add the Cauchy prior
+lines(x, y_cauchy, lwd = 2, col = "#d81b60")
+
+# Add a legend
+legend("topright", legend = c("Normal (mean = 0, sd = .5)",
+                              "Normal (mean = 0, sd = 1)",
+                              "Normal (mean = 0, sd = 1.5)",
+                              "Normal (mean = 0, sd = 2.5)",
+                              "Cauchy (location = 0, scale = .7)"),
+       col = c("#3949ab", "#1e88e5", "#00acc1", "#ff5722","#d81b60"), lwd = 2)
+
+
+abline(v = 1, col = "black", lwd = 2, lty = 2)
+
+
+
+y_eff <- dnorm(x, mean = 1, sd = 2)
+y_eff2 <- dnorm(x, mean = 1, sd = .4)
+
+plot(x, y_cauchy, type = "l", lwd = 2, col = "#d81b60", 
+     xlab = "x", ylab = "Density",
+     main = "Normal and Cauchy Priors")
+
+# Add the Normal prior with SD = 2.5
+lines(x, y_normal_2, lwd = 2, col = "#ff5722")
+
+# Add the Cauchy prior
+lines(x, y_eff, lwd = 2, col = "#4caf50")
+
+lines(x, y_eff2, lwd = 2, col = "#33691e")
+
+abline(v = 0, col = "black", lwd = 2, lty = 2)
+
+
+options(scipen = 999)
+bayestestR::bayesfactor(y_eff2, prior = y_cauchy, null = 0)
+bayestestR::bayesfactor(y_eff2, prior = y_normal_2, null = 0)
+
+
+
+
+library(bayestestR)
+
+prior_cauchy <- distribution_cauchy(1000, 0, .7)
+prior_normal <- distribution_normal(1000, 0, 2.5)
+
+posterior <- distribution_normal(1000, mean = 0.5, sd = 0.3)
+
+bayesfactor(posterior, prior = prior_cauchy, verbose = FALSE)$log_BF
+bayesfactor(posterior, prior = prior_normal, verbose = FALSE)
+
+plot(x, posterior, type = "l", lwd = 2, col = "#4caf50", 
+     xlab = "x", ylab = "Density",
+     main = "Normal and Cauchy Priors")
+
 
 
 
