@@ -523,41 +523,158 @@ plt_f3_SA_cont <- f3_SA_BFs %>%
 
 # do a robustness on the 5mnth window
 pacman::p_load(tidyverse, lubridate, stringr, RDHonest, fastDummies, mice, ggseg, anytime, kableExtra,
-               rstanarm, insight, bayestestR, furrr, bayesplot, ggseg, ggsegTracula)
+               rstanarm, insight, bayestestR, furrr, bayesplot, patchwork)
 
-s08 <- c(-5:4) - 80
-s07 <- c(-5:4) - 70
-s06 <- c(-5:4) - 60
-s05 <- c(-5:4) - 50
-s04 <- c(-5:4) - 40
-s03 <- c(-5:4) - 30
-s02 <- c(-5:4) - 20
-s01 <- c(-5:4) - 10
-s1 <- c(-5:4)
-s11 <- c(-5:4) + 11
-s12 <- c(-5:4) + 11 + 10
-s13 <- c(-5:4) + 11 + 20
-s14 <- c(-5:4) + 11 + 30
-s15 <- c(-5:4) + 11 + 40
-s16 <- c(-5:4) + 11 + 50
-s17 <- c(-5:4) + 11 + 60
-s18 <- c(-5:4) + 11 + 70
+plan(multisession, workers = 6) # THIS WORKS
+# grab functions
+source("~/projects/roslaUKB/main_analysis/0_functions.R")
+fullset <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/proc/20240223_fullset.csv")
 
-subsets <- list(s08, s07, s06, s05, s04, s03, s02, s01, s1, s11, s12, s13, s14, s15, s16, s17, s18)
+# sets
+s1949 <- fullset[running_var %in% (c(-5:4) - 24*4)] 
+s1951 <- fullset[running_var %in% (c(-5:4) - 24*3)] 
+s1953 <- fullset[running_var %in% (c(-5:4) - 24*2)] 
+s1955 <- fullset[running_var %in% (c(-5:4) - 24)] 
+s1957 <- fullset[running_var %in% (-5:4)] 
+s1959 <- fullset[running_var %in% (c(-5:4) + 24)] 
+s1961 <- fullset[running_var %in% (c(-5:4) + 24*2)] 
+s1963 <- fullset[running_var %in% (c(-5:4) + 24*3)]
+s1965 <- fullset[running_var %in% (c(-5:4) + 24*4)]
 
-DVs2 <- rep(c("SA", "CT", "CSF_norm", "TBV_norm", "WM_hyper", "wFA"), each = length(subsets)) #amazing 
+# seems good
+# table(s1951$month); table(s1951$year)
+# table(s1957$month); table(s1957$year)
+# table(s1963$month); table(s1963$year)
 
-# fullset <- data.table::fread("/Volumes/home/lifespan/nicjud/UKB/proc/20240223_fullset.csv")
 
-# scale DVs
-fullset <- fullset[,(str_c(unique(DVs2), ".s")) := lapply(.SD, function(x) as.numeric(scale(x))), .SDcols=unique(DVs2)]
-DVs2 <- str_c(DVs2, ".s") #amazing 
 
-EduRobust_mods_1sd <- future_map2(DVs2, subsets, \(y, x) bayesFIT(y, "EduAge", b6_covs, 
-                                                             fullset[running_var %in% as.numeric(x)],
+covs <- c("sex", "visit_day_correct", "visit_day_correct2", "headmotion",
+          "imaging_center_11026", "imaging_center_11027", "imaging_center_11028", 
+          "dMRI_25922_1", "dMRI_25921_1", "dMRI_25928_1")
+
+DVs <- c("SA", "CT", "CSF_norm", "TBV_norm", "WM_hyper", "wFA")
+
+# before
+s1949_mods <- future_map(DVs, ~bayesFIT(.x, "EduAge", covs[-7], # Constant variable(s) found: imaging_center_11028
+                                        s1949,
+                                        BF_prior = normal(location = 0, scale = 1, autoscale = TRUE)), .options = furrr_options(seed = T))
+s1951_mods <- future_map(DVs, ~bayesFIT(.x, "EduAge", covs[-7], # Constant variable(s) found: imaging_center_11028
+                                      s1951,
+                          BF_prior = normal(location = 0, scale = 1, autoscale = TRUE)), .options = furrr_options(seed = T))
+s1953_mods <- future_map(DVs, ~bayesFIT(.x, "EduAge", covs[-7], # this one could have it, but since the others can't i'm skipping it
+                                      s1953,
+                                      BF_prior = normal(location = 0, scale = 1, autoscale = TRUE)), .options = furrr_options(seed = T))
+s1955_mods <- future_map(DVs, ~bayesFIT(.x, "EduAge", covs[-7], # this one could have it, but since the others can't i'm skipping it
+                                        s1955,
+                                        BF_prior = normal(location = 0, scale = 1, autoscale = TRUE)), .options = furrr_options(seed = T))
+# during ROSLA
+s1957_mods <- future_map(DVs, ~bayesFIT(.x, "EduAge", covs[-7], # Constant variable(s) found: imaging_center_11028
+                                      s1957,
+                                      BF_prior = normal(location = 0, scale = 1, autoscale = TRUE)), .options = furrr_options(seed = T))
+# after
+s1959_mods <- future_map(DVs, ~bayesFIT(.x, "EduAge", covs[-7], # Constant variable(s) found: imaging_center_11028
+                                        s1959,
+                                        BF_prior = normal(location = 0, scale = 1, autoscale = TRUE)), .options = furrr_options(seed = T))
+s1961_mods <- future_map(DVs, ~bayesFIT(.x, "EduAge", covs[-7], # Constant variable(s) found: imaging_center_11028
+                                        s1961,
+                                        BF_prior = normal(location = 0, scale = 1, autoscale = TRUE)), .options = furrr_options(seed = T))
+s1963_mods <- future_map(DVs, ~bayesFIT(.x, "EduAge", covs[-7], # Constant variable(s) found: imaging_center_11028
+                                        s1963,
+                                        BF_prior = normal(location = 0, scale = 1, autoscale = TRUE)), .options = furrr_options(seed = T))
+s1965_mods <- future_map(DVs, ~bayesFIT(.x, "EduAge", covs[-7], # Constant variable(s) found: imaging_center_11028
+                                        s1965,
+                                        BF_prior = normal(location = 0, scale = 1, autoscale = TRUE)), .options = furrr_options(seed = T))
+
+dv_hold <- rep(DVs, each = 160000)
+
+s1949_mods_post <- s1949_mods %>% map(~get_parameters(.)[,2]) %>% unlist()
+s1951_mods_post <- s1951_mods %>% map(~get_parameters(.)[,2]) %>% unlist()
+length(s08_post) == 160000*6
+
+s1953_mods_post <- s1953_mods %>% map(~get_parameters(.)[,2]) %>% unlist()
+s1955_mods_post <- s1955_mods %>% map(~get_parameters(.)[,2]) %>% unlist()
+s1957_mods_post <- s1957_mods %>% map(~get_parameters(.)[,2]) %>% unlist()
+s1959_mods_post <- s1959_mods %>% map(~get_parameters(.)[,2]) %>% unlist()
+s1961_mods_post <- s1961_mods %>% map(~get_parameters(.)[,2]) %>% unlist()
+s1963_mods_post <- s1963_mods %>% map(~get_parameters(.)[,2]) %>% unlist()
+s1965_mods_post <- s1965_mods %>% map(~get_parameters(.)[,2]) %>% unlist()
+
+
+plot_posterior_EduAge <- data.frame(posterior = c(s1949_mods_post, s1951_mods_post, s1953_mods_post, s1955_mods_post, s1957_mods_post, s1959_mods_post, s1961_mods_post, s1963_mods_post, s1965_mods_post),
+                                    sample = rep(c("s1949","s1951", "s1953", "s1955", "s1957", "s1959", "s1961", "s1963","s1965"), each = 160000*6), #number the times of dvs
+                                    DV = rep(dv_hold, 9)) #time the number of datasets
+
+
+
+SubSets_effs <- ggplot(plot_posterior_EduAge, aes(sample, posterior, fill = sample)) +
+  geom_boxplot(alpha = .5, outlier.color = NA) +
+  theme_minimal(base_size = 15) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  theme(legend.position = "NA", axis.text.x= element_text(angle=45)) +
+  facet_wrap(~DV, scales = "free_y") +
+  labs(x = "10 month window subsets", y = "Educational Attainment Posterior")
+# ggsave("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/10.02.01 ROLSA Brain/results/plts/SI_plt6_SubsetEffects.png",
+#        SubSets_effs, bg = "white", width = 9, height = 5)
+
+
+# displaying the levels of education per subset
+Edu_dist_samples <- data.frame(EduAge = c(s1949$EduAge, s1951$EduAge, s1953$EduAge, s1955$EduAge, s1957$EduAge, s1959$EduAge, s1961$EduAge, s1963$EduAge, s1965$EduAge),
+                               sample = c(rep("s1949", each = nrow(s1949)), rep("s1951", each = nrow(s1951)), rep("s1953", each = nrow(s1953)), rep("s1955", each = nrow(s1955)),
+                                          rep("s1957", each = nrow(s1957)), 
+                                          rep("s1959", each = nrow(s1959)), rep("s1961", each = nrow(s1961)), rep("s1963", each = nrow(s1963)), rep("s1965", each = nrow(s1965))))
+
+SubSets_eduAge <- ggplot(Edu_dist_samples, aes(EduAge, sample, fill = sample)) +
+  ggridges::geom_density_ridges(scale = 2, rel_min_height = .01) +
+  theme_minimal(base_size = 20) + theme(legend.position = "NA") +
+  labs(y = "Subsets", x = "Educational Attainment") +
+  xlim(12, 24)
+# ggsave("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/10.02.01 ROLSA Brain/results/plts/SI_plt6_SubsetEduAge.png",
+#        SubSets_eduAge, bg = "white", width = 8, height = 5)
+
+
+
+# need to plot the subsets
+
+hold_df <- data.frame(DOB_range = sort(unique(ym(str_c(fullset$year, "-", fullset$month)))), 
+                      running = sort(unique(fullset$running_var)))
+
+
+hold_df$subset <- rep(NA, dim(hold_df)[1])
+hold_df$subset[hold_df$running %in% unique(s1949$running_var)] <- rep("s1949", sum(hold_df$running %in% unique(s1949$running_var)))
+hold_df$subset[hold_df$running %in% unique(s1951$running_var)] <- rep("s1951", sum(hold_df$running %in% unique(s1951$running_var)))
+hold_df$subset[hold_df$running %in% unique(s1953$running_var)] <- rep("s1953", sum(hold_df$running %in% unique(s1953$running_var)))
+hold_df$subset[hold_df$running %in% unique(s1955$running_var)] <- rep("s1955", sum(hold_df$running %in% unique(s1955$running_var)))
+hold_df$subset[hold_df$running %in% unique(s1957$running_var)] <- rep("s1957", sum(hold_df$running %in% unique(s1957$running_var)))
+hold_df$subset[hold_df$running %in% unique(s1959$running_var)] <- rep("s1959", sum(hold_df$running %in% unique(s1959$running_var)))
+hold_df$subset[hold_df$running %in% unique(s1961$running_var)] <- rep("s1961", sum(hold_df$running %in% unique(s1961$running_var)))
+hold_df$subset[hold_df$running %in% unique(s1963$running_var)] <- rep("s1963", sum(hold_df$running %in% unique(s1963$running_var)))
+hold_df$subset[hold_df$running %in% unique(s1965$running_var)] <- rep("s1965", sum(hold_df$running %in% unique(s1965$running_var)))
+
+SubSets_desc <- ggplot(hold_df, aes(running, DOB_range, color = subset)) +
+  geom_point(size = 3) +
+  theme_minimal(base_size = 20) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_color_discrete(na.translate = F) +
+  geom_line() +
+  theme(legend.position = "NA") +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  labs(x = "running variable", y = "Date of Birth")
+
+SI_plt5 <- SubSets_desc / SubSets_eduAge + plot_annotation(tag_levels = 'a')
+
+ggsave("~/My Drive/Assembled Chaos/10 Projects/10.02 ROSLA UK BioBank/10.02.01 ROLSA Brain/results/plts/SI_plt5_SubsetDec.png",
+       SI_plt5, bg = "white", width = 6, height = 8)
+
+s08_mods %>% map(~posterior_predict(., draws = 100)) %>% map(~mean(.))
+
+
+ct <- posterior_predict(s08_mods[[1]])
+
+
+EduRobust_mods_1sd <- future_map2(DVs2, subsets, \(y, x) bayesFIT(y, "EduAge", b6_covs, fullset[running_var %in% as.numeric(x)],
                                                     BF_prior = normal(location = 0, scale = 1, autoscale = TRUE)), .options = furrr_options(seed = T))
 
-
+EduRobust_mods_1sd
 
 
 m1Bayes_1SD <- modB1_1sd %>%
@@ -576,6 +693,111 @@ b6 <- fullset[running_var %in% c(-5:4)][
   !is.na(visit_date) #must be an imaging subjects (visit date instance 2)
 ]
 
+
+s08_sa <- bayesFIT("SA", "EduAge", covs[-9], fullset[running_var %in% as.numeric(s08)],
+         BF_prior = normal(location = 0, scale = 1, autoscale = TRUE))
+
+s1_sa <- bayesFIT("SA", "EduAge", covs[-9], fullset[running_var %in% as.numeric(s1)],
+                   BF_prior = normal(location = 0, scale = 1, autoscale = TRUE))
+
+s18_sa <- bayesFIT("SA", "EduAge", covs[-9], fullset[running_var %in% as.numeric(s18)],
+                   BF_prior = normal(location = 0, scale = 1, autoscale = TRUE))
+
+df <- data.frame(posterior = paste0(as.numeric(posterior_predict(s08_sa, draws = 1000)), 
+                                    as.numeric(posterior_predict(s1_sa, draws = 1000)),
+                                    as.numeric(posterior_predict(s18_sa, draws = 1000))), 
+                 sample = paste0(rep("s08", 1000), rep("s1", 1000), rep("s18", 1000)))
+
+
+ggplot(df, aes(posterior, fill = sample)) +
+  geom_density(alpha = .5) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+
+
+
+
+#### reviewer prior plots
+# Define the sequence of x values
+x <- seq(-10, 10, length.out = 1000)
+
+# Compute the densities for the distributions
+y_normal_.5 <- dnorm(x, mean = 0, sd = .5)
+y_normal_1 <- dnorm(x, mean = 0, sd = 1)
+y_normal_1.5 <- dnorm(x, mean = 0, sd = 1.5)
+y_normal_2 <- dnorm(x, mean = 0, sd = 2.5)
+y_cauchy <- dcauchy(x, location = 0, scale = 0.7)
+
+# Plot the Normal prior with SD = 1
+plot(x, y_normal_.5, type = "l", lwd = 2, col = "#3949ab",
+     xlab = "x", ylab = "Density",
+     main = "Normal and Cauchy Priors")
+
+# Add the Normal prior with SD = .5
+lines(x, y_normal_1, lwd = 2, col = "#1e88e5")
+
+# Add the Normal prior with SD = 1.5
+lines(x, y_normal_1.5, lwd = 2, col = "#00acc1")
+
+
+# Add the Normal prior with SD = 2.5
+lines(x, y_normal_2, lwd = 2, col = "#ff5722")
+
+# Add the Cauchy prior
+lines(x, y_cauchy, lwd = 2, col = "#d81b60")
+
+# Add a legend
+legend("topright", legend = c("Normal (mean = 0, sd = .5)",
+                              "Normal (mean = 0, sd = 1)",
+                              "Normal (mean = 0, sd = 1.5)",
+                              "Normal (mean = 0, sd = 2.5)",
+                              "Cauchy (location = 0, scale = .7)"),
+       col = c("#3949ab", "#1e88e5", "#00acc1", "#ff5722","#d81b60"), lwd = 2)
+
+
+abline(v = 1, col = "black", lwd = 2, lty = 2)
+
+
+
+y_eff <- dnorm(x, mean = 1, sd = 2)
+y_eff2 <- dnorm(x, mean = 1, sd = .4)
+
+plot(x, y_cauchy, type = "l", lwd = 2, col = "#d81b60", 
+     xlab = "x", ylab = "Density",
+     main = "Normal and Cauchy Priors")
+
+# Add the Normal prior with SD = 2.5
+lines(x, y_normal_2, lwd = 2, col = "#ff5722")
+
+# Add the Cauchy prior
+lines(x, y_eff, lwd = 2, col = "#4caf50")
+
+lines(x, y_eff2, lwd = 2, col = "#33691e")
+
+abline(v = 0, col = "black", lwd = 2, lty = 2)
+
+
+options(scipen = 999)
+bayestestR::bayesfactor(y_eff2, prior = y_cauchy, null = 0)
+bayestestR::bayesfactor(y_eff2, prior = y_normal_2, null = 0)
+
+
+
+
+library(bayestestR)
+
+prior_cauchy <- distribution_cauchy(1000, 0, .7)
+prior_normal <- distribution_normal(1000, 0, 2.5)
+
+posterior <- distribution_normal(1000, mean = 0.5, sd = 0.3)
+
+bayesfactor(posterior, prior = prior_cauchy, verbose = FALSE)$log_BF
+bayesfactor(posterior, prior = prior_normal, verbose = FALSE)
+
+plot(x, posterior, type = "l", lwd = 2, col = "#4caf50", 
+     xlab = "x", ylab = "Density",
+     main = "Normal and Cauchy Priors")
 
 
 
