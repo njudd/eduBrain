@@ -1,11 +1,9 @@
 # No effect of additional education on long-term brain structure – a preregistered natural experiment in thousands of individuals.
-Dr. Nicholas Judd & Prof. Rogier Kievit
+Dr. Nicholas Judd & Prof. Rogier Kievit - Donders Institute
 
 [Slides on the results & resources for regression discontinuity](https://www.njudd.com/causalinference/)
 
-See the paper in [Elife](https://elifesciences.org/reviewed-preprints/101526)
-
-See the preregistration [here](https://osf.io/rv38z)
+See the paper in [Elife](https://elifesciences.org/reviewed-preprints/101526) and the preregistration [here](https://osf.io/rv38z)
 
 
 **Recommendation:** I would take a look at [this directory](https://github.com/njudd/EduTelomere) it is a much cleaner implementation of testing the natural experiment (ROSLA) in the UK Biobank. This script uses an outdated package version of RDHonest before covariate correction was added.
