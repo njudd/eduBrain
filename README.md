@@ -10,7 +10,7 @@ See the preregistration [here](https://osf.io/rv38z)
 
 **Recommendation:** I would take a look at [this directory](https://github.com/njudd/EduTelomere) it is a much cleaner implementation of testing the natural experiment (ROSLA) in the UK Biobank. This script uses an outdated package version of RDHonest before covariate correction was added.
 
-[](!https://www.njudd.com/assets/proj_imgs/rd/Fig1_4_take2.png)
+![](https://www.njudd.com/assets/proj_imgs/rd/Fig1_4_take2.png)
 
 
 
